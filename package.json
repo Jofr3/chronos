@@ -1,0 +1,16 @@
+{
+  "name": "chronos",
+  "type": "module",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev:backend": "bun --filter @chronos/backend dev",
+    "dev:frontend": "bun --filter @chronos/frontend dev",
+    "dev": "bun --filter '*' dev",
+    "build": "bun --filter '*' build"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5"
+  }
+}
