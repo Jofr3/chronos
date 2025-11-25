@@ -1,6 +1,7 @@
 # Cloudflare Pages build configuration
+# Note: Root config at /cloudflare-pages-config.json takes precedence
 [build]
-command = "bun run build"
+command = "cd ../.. && bun install && cd apps/frontend && bun run build"
 directory = "dist"
 
 # Deploy command should be empty for Cloudflare Pages
