@@ -4,10 +4,18 @@
   "private": true,
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
+    "dev": "bun --filter '*' dev",
     "dev:backend": "bun --filter @chronos/backend dev",
     "dev:frontend": "bun --filter @chronos/frontend dev",
-    "dev": "bun --filter '*' dev",
-    "build": "bun --filter '*' build"
+
+    "preview": "bun --filter '*' preview",
+    "preview:frontend": "bun --filter @chronos/frontend preview",
+
+    "simulation": "bun --filter '*' simulation",
+    "simulation:frontend": "bun --filter @chronos/frontend simulation",
+
+    "build": "bun --filter '*' build",
+    "build.preview": "bun --filter '*' build.preview"
   },
   "devDependencies": {
     "@types/bun": "latest",

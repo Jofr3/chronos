@@ -2,15 +2,6 @@
 
 A modern full-stack monorepo using [Bun workspaces](https://bun.sh/docs/install/workspaces) with a Qwik frontend and Hono backend, deployable to Cloudflare.
 
-## Features
-
-- **Fast Development**: Bun for lightning-fast package management and runtime
-- **Resumable Frontend**: Qwik framework with zero hydration overhead
-- **Lightweight Backend**: Hono framework for minimal API server
-- **Type Safety**: Shared TypeScript types across all workspaces
-- **Edge Deployment**: Cloudflare Pages (frontend) and Workers (backend)
-- **Modern Tooling**: Vite, ESLint, Prettier, and TypeScript 5
-
 ## Project Structure
 
 ```
@@ -36,17 +27,12 @@ chronos-ws/
 
 ## Quick Start
 
-### Prerequisites
-
-- [Bun](https://bun.sh) 1.0 or later
-- Node.js 18+ (required by some frontend dependencies)
-
 ### Setup
 
 ```bash
 # Clone the repository
 git clone <repository-url>
-cd chronos-ws
+cd chronos
 
 # Install dependencies
 bun install
@@ -94,8 +80,6 @@ Build outputs:
 cd apps/backend
 bun deploy
 ```
-
-Configure your Worker in `wrangler.toml`. See [Cloudflare Workers docs](https://developers.cloudflare.com/workers/) for setup.
 
 ### Frontend (Cloudflare Pages)
 
@@ -145,41 +129,6 @@ const response = await fetch("/api/users");
 const data: ApiResponse<User[]> = await response.json();
 ```
 
-### Creating New Routes
-
-**Backend (Hono):**
-
-```typescript
-// apps/backend/src/index.ts
-app.get("/api/hello", (c) => {
-  return c.json({ message: "Hello World" });
-});
-```
-
-**Frontend (Qwik):**
-
-```typescript
-// apps/frontend/src/routes/hello/index.tsx
-import { component$ } from "@builder.io/qwik";
-
-export default component$(() => {
-  return <div>Hello World</div>;
-});
-```
-
-### Linting and Formatting
-
-```bash
-# Lint frontend
-bun --filter @chronos/frontend lint
-
-# Format frontend with Prettier
-bun --filter @chronos/frontend fmt
-
-# Check formatting
-bun --filter @chronos/frontend fmt.check
-```
-
 ## Workspaces
 
 ### @chronos/backend
@@ -208,17 +157,6 @@ Shared TypeScript definitions.
 - **Current types**: `User`, `ApiResponse<T>`, `ApiError`
 - **Import via**: `import type { ... } from "@chronos/types"`
 
-## Scripts Reference
-
-| Command | Description |
-|---------|-------------|
-| `bun install` | Install all dependencies |
-| `bun dev` | Run all workspaces in dev mode |
-| `bun dev:backend` | Run backend only |
-| `bun dev:frontend` | Run frontend only |
-| `bun build` | Build all workspaces |
-| `bun --filter <workspace> <script>` | Run script in specific workspace |
-
 ## Tech Stack
 
 - **Package Manager**: [Bun](https://bun.sh)
@@ -228,40 +166,3 @@ Shared TypeScript definitions.
 - **Language**: [TypeScript](https://www.typescriptlang.org/) 5
 - **Deployment**: [Cloudflare Pages](https://pages.cloudflare.com/) + [Workers](https://workers.cloudflare.com/)
 - **Code Quality**: ESLint, Prettier
-
-## Troubleshooting
-
-### Workspace dependencies not found
-
-```bash
-bun install  # Re-link workspace packages
-```
-
-### TypeScript errors
-
-Ensure your IDE is using the workspace TypeScript version and restart the TypeScript server.
-
-### Port already in use
-
-The backend runs on port 3000 by default. You can change this in `apps/backend/src/index.ts` or kill the process using the port.
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## License
-
-[Your License Here]
-
-## Resources
-
-- [Bun Documentation](https://bun.sh/docs)
-- [Qwik Documentation](https://qwik.dev/)
-- [Qwik City Routing](https://qwik.dev/qwikcity/routing/overview/)
-- [Hono Documentation](https://hono.dev/)
-- [Cloudflare Pages](https://developers.cloudflare.com/pages/)
-- [Cloudflare Workers](https://developers.cloudflare.com/workers/)
