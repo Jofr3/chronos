@@ -95,19 +95,6 @@ Or connect your Git repository to Cloudflare Pages with these build settings:
 
 ## Development Guides
 
-### Adding Dependencies
-
-```bash
-# Add to backend
-bun add --filter @chronos/backend <package-name>
-
-# Add to frontend
-bun add --filter @chronos/frontend <package-name>
-
-# Add shared dev dependency (at root)
-bun add -d <package-name>
-```
-
 ### Using Shared Types
 
 All shared TypeScript types are in the `@chronos/types` package:
