@@ -1,9 +1,9 @@
-name = "chronos-test"
+name = "chronos-frontend"
 compatibility_date = "2025-11-24"
 pages_build_output_dir = "./dist"
 
 [env.production]
-name = "chronos-test"
+name = "chronos-frontend"
 
 [env.preview]
-name = "chronos-test-preview"
+name = "chronos-frontend-preview"
