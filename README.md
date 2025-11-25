@@ -166,3 +166,4 @@ Shared TypeScript definitions.
 - **Language**: [TypeScript](https://www.typescriptlang.org/) 5
 - **Deployment**: [Cloudflare Pages](https://pages.cloudflare.com/) + [Workers](https://workers.cloudflare.com/)
 - **Code Quality**: ESLint, Prettier
+
