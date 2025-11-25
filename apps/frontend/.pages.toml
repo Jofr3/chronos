@@ -1,0 +1,8 @@
+# Cloudflare Pages build configuration
+[build]
+command = "bun run build"
+directory = "dist"
+
+# Deploy command should be empty for Cloudflare Pages
+# The build output is automatically deployed
+deploy_command = ""
