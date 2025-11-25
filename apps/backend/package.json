@@ -3,14 +3,6 @@
   "type": "module",
   "scripts": {
     "dev": "bun run --hot src/index.ts",
-
-    "preview": "bun run dev",
-    "simulation": "bun run dev",
-
-    "build": "bun build src/index.ts --outfile=dist/index.js --target=bun",
-    "build.preview": "bun run build",
-
-    "deploy": "bun run build && wrangler deploy"
   },
   "dependencies": {
     "@chronos/types": "workspace:*",

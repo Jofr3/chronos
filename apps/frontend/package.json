@@ -7,19 +7,19 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "qwik": "qwik",
-
-    "dev": "vite --mode ssr",
-    "dev.debug": "node --inspect-brk ./node_modules/vite/bin/vite.js --mode ssr --force",
-
-    "preview": "qwik build preview && vite preview",
-    "simulation": "bun run build && wrangler pages dev ./dist --compatibility-flags=nodejs_als",
-
     "build": "qwik build",
+    "build.client": "vite build",
     "build.preview": "vite build --ssr src/entry.preview.tsx",
     "build.types": "tsc --incremental --noEmit",
-
-    "deploy": "bun run build && wrangler pages deploy ./dist"
+    "deploy": "echo 'Run \"npm run qwik add\" to install a server adapter'",
+    "dev": "vite --mode ssr",
+    "dev.debug": "node --inspect-brk ./node_modules/vite/bin/vite.js --mode ssr --force",
+    "fmt": "prettier --write .",
+    "fmt.check": "prettier --check .",
+    "lint": "eslint \"src/**/*.ts*\"",
+    "preview": "qwik build preview && vite preview --open",
+    "start": "vite --open --mode ssr",
+    "qwik": "qwik"
   },
   "dependencies": {
     "@chronos/types": "workspace:*"
@@ -38,7 +38,6 @@
     "typescript-plugin-css-modules": "latest",
     "undici": "*",
     "vite": "7.1.11",
-    "vite-tsconfig-paths": "^4.2.1",
-    "wrangler": "^3.0.0"
+    "vite-tsconfig-paths": "^4.2.1"
   }
 }
