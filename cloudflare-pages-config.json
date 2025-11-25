@@ -1,9 +1,0 @@
-{
-  "build_command": "bun install && cd apps/frontend && bun run build",
-  "destination_dir": "apps/frontend/dist",
-  "root_dir": "/",
-  "env_vars": {
-    "NODE_VERSION": "20",
-    "BUN_VERSION": "latest"
-  }
-}
