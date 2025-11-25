@@ -2,7 +2,9 @@
   "name": "@chronos/backend",
   "type": "module",
   "scripts": {
-    "dev": "bun run --hot src/index.ts"
+    "dev": "bun run --hot src/index.ts",
+    "build": "bun build src/index.ts --outfile=dist/index.js --target=bun",
+    "deploy": "wrangler deploy"
   },
   "dependencies": {
     "@chronos/types": "workspace:*",
