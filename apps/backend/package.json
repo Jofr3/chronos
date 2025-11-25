@@ -2,7 +2,7 @@
   "name": "@chronos/backend",
   "type": "module",
   "scripts": {
-    "dev": "bun run --hot src/index.ts",
+    "dev": "bun run --hot src/index.ts"
   },
   "dependencies": {
     "@chronos/types": "workspace:*",
