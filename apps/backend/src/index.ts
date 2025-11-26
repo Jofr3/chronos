@@ -1,13 +1,23 @@
-import { Hono } from 'hono'
+import { Hono } from "hono";
+import { cors } from "hono/cors";
+import type { Env } from "./types/env";
+import users from "./routes/users";
 
-const app = new Hono()
+const app = new Hono<{ Bindings: Env }>();
 
-app.get('/', (c) => {
-  return c.text('Hello Hono!')
-})
+// Middleware
+app.use("/*", cors());
 
-app.get('/api/health', (c) => {
-  return c.json({ status: 'ok', timestamp: new Date().toISOString() })
-})
+// Health check
+app.get("/", (c) => {
+  return c.json({
+    success: true,
+    message: "Chronos API is running",
+    timestamp: new Date().toISOString(),
+  });
+});
 
-export default app
+// Routes
+app.route("/api/users", users);
+
+export default app;

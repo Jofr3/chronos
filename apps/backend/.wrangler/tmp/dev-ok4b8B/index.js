@@ -1542,14 +1542,420 @@ var Hono2 = class extends Hono {
   }
 };
 
+// ../../node_modules/.bun/hono@4.10.6/node_modules/hono/dist/middleware/cors/index.js
+var cors = /* @__PURE__ */ __name((options) => {
+  const defaults = {
+    origin: "*",
+    allowMethods: ["GET", "HEAD", "PUT", "POST", "DELETE", "PATCH"],
+    allowHeaders: [],
+    exposeHeaders: []
+  };
+  const opts = {
+    ...defaults,
+    ...options
+  };
+  const findAllowOrigin = ((optsOrigin) => {
+    if (typeof optsOrigin === "string") {
+      if (optsOrigin === "*") {
+        return () => optsOrigin;
+      } else {
+        return (origin) => optsOrigin === origin ? origin : null;
+      }
+    } else if (typeof optsOrigin === "function") {
+      return optsOrigin;
+    } else {
+      return (origin) => optsOrigin.includes(origin) ? origin : null;
+    }
+  })(opts.origin);
+  const findAllowMethods = ((optsAllowMethods) => {
+    if (typeof optsAllowMethods === "function") {
+      return optsAllowMethods;
+    } else if (Array.isArray(optsAllowMethods)) {
+      return () => optsAllowMethods;
+    } else {
+      return () => [];
+    }
+  })(opts.allowMethods);
+  return /* @__PURE__ */ __name(async function cors2(c, next) {
+    function set(key, value) {
+      c.res.headers.set(key, value);
+    }
+    __name(set, "set");
+    const allowOrigin = await findAllowOrigin(c.req.header("origin") || "", c);
+    if (allowOrigin) {
+      set("Access-Control-Allow-Origin", allowOrigin);
+    }
+    if (opts.credentials) {
+      set("Access-Control-Allow-Credentials", "true");
+    }
+    if (opts.exposeHeaders?.length) {
+      set("Access-Control-Expose-Headers", opts.exposeHeaders.join(","));
+    }
+    if (c.req.method === "OPTIONS") {
+      if (opts.origin !== "*") {
+        set("Vary", "Origin");
+      }
+      if (opts.maxAge != null) {
+        set("Access-Control-Max-Age", opts.maxAge.toString());
+      }
+      const allowMethods = await findAllowMethods(c.req.header("origin") || "", c);
+      if (allowMethods.length) {
+        set("Access-Control-Allow-Methods", allowMethods.join(","));
+      }
+      let headers = opts.allowHeaders;
+      if (!headers?.length) {
+        const requestHeaders = c.req.header("Access-Control-Request-Headers");
+        if (requestHeaders) {
+          headers = requestHeaders.split(/\s*,\s*/);
+        }
+      }
+      if (headers?.length) {
+        set("Access-Control-Allow-Headers", headers.join(","));
+        c.res.headers.append("Vary", "Access-Control-Request-Headers");
+      }
+      c.res.headers.delete("Content-Length");
+      c.res.headers.delete("Content-Type");
+      return new Response(null, {
+        headers: c.res.headers,
+        status: 204,
+        statusText: "No Content"
+      });
+    }
+    await next();
+    if (opts.origin !== "*") {
+      c.header("Vary", "Origin", { append: true });
+    }
+  }, "cors2");
+}, "cors");
+
+// src/db/queries/users.ts
+async function getAllUsers(db) {
+  const stmt = db.prepare("SELECT * FROM users ORDER BY created_at DESC");
+  const result = await stmt.all();
+  if (!result.success) {
+    throw new Error(result.error || "Failed to fetch users");
+  }
+  return result.results.map(mapUserRowToUser);
+}
+__name(getAllUsers, "getAllUsers");
+async function getUserById(db, id) {
+  const stmt = db.prepare("SELECT * FROM users WHERE id = ?").bind(id);
+  const user = await stmt.first();
+  if (!user) {
+    return null;
+  }
+  return mapUserRowToUser(user);
+}
+__name(getUserById, "getUserById");
+async function getUserByEmail(db, email) {
+  const stmt = db.prepare("SELECT * FROM users WHERE email = ?").bind(email);
+  const user = await stmt.first();
+  if (!user) {
+    return null;
+  }
+  return mapUserRowToUser(user);
+}
+__name(getUserByEmail, "getUserByEmail");
+async function createUser(db, data) {
+  const id = crypto.randomUUID();
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const stmt = db.prepare(
+    "INSERT INTO users (id, email, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)"
+  ).bind(id, data.email, data.name, now, now);
+  const result = await stmt.run();
+  if (!result.success) {
+    throw new Error(result.error || "Failed to create user");
+  }
+  return {
+    id,
+    email: data.email,
+    name: data.name,
+    createdAt: new Date(now),
+    updatedAt: new Date(now)
+  };
+}
+__name(createUser, "createUser");
+async function updateUser(db, id, data) {
+  const existingUser = await getUserById(db, id);
+  if (!existingUser) {
+    return null;
+  }
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const updates = [];
+  const values = [];
+  if (data.email !== void 0) {
+    updates.push("email = ?");
+    values.push(data.email);
+  }
+  if (data.name !== void 0) {
+    updates.push("name = ?");
+    values.push(data.name);
+  }
+  if (updates.length === 0) {
+    return existingUser;
+  }
+  updates.push("updated_at = ?");
+  values.push(now);
+  values.push(id);
+  const stmt = db.prepare(
+    `UPDATE users SET ${updates.join(", ")} WHERE id = ?`
+  ).bind(...values);
+  const result = await stmt.run();
+  if (!result.success) {
+    throw new Error(result.error || "Failed to update user");
+  }
+  return getUserById(db, id);
+}
+__name(updateUser, "updateUser");
+async function deleteUser(db, id) {
+  const stmt = db.prepare("DELETE FROM users WHERE id = ?").bind(id);
+  const result = await stmt.run();
+  if (!result.success) {
+    throw new Error(result.error || "Failed to delete user");
+  }
+  return result.meta.rows_written > 0;
+}
+__name(deleteUser, "deleteUser");
+function mapUserRowToUser(row) {
+  return {
+    id: row.id,
+    email: row.email,
+    name: row.name,
+    createdAt: new Date(row.created_at),
+    updatedAt: new Date(row.updated_at)
+  };
+}
+__name(mapUserRowToUser, "mapUserRowToUser");
+
+// src/services/user.service.ts
+var UserService = class {
+  constructor(db) {
+    this.db = db;
+  }
+  static {
+    __name(this, "UserService");
+  }
+  async getAllUsers() {
+    return getAllUsers(this.db);
+  }
+  async getUserById(id) {
+    return getUserById(this.db, id);
+  }
+  async getUserByEmail(email) {
+    return getUserByEmail(this.db, email);
+  }
+  async createUser(data) {
+    if (!this.isValidEmail(data.email)) {
+      throw new Error("Invalid email format");
+    }
+    const existingUser = await this.getUserByEmail(data.email);
+    if (existingUser) {
+      throw new Error("User with this email already exists");
+    }
+    return createUser(this.db, data);
+  }
+  async updateUser(id, data) {
+    if (data.email && !this.isValidEmail(data.email)) {
+      throw new Error("Invalid email format");
+    }
+    return updateUser(this.db, id, data);
+  }
+  async deleteUser(id) {
+    return deleteUser(this.db, id);
+  }
+  isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+};
+
+// src/routes/users.ts
+var users = new Hono2();
+users.get("/", async (c) => {
+  try {
+    const userService = new UserService(c.env.DB);
+    const allUsers = await userService.getAllUsers();
+    const response = {
+      data: allUsers,
+      success: true,
+      message: "Users retrieved successfully"
+    };
+    return c.json(response);
+  } catch (error) {
+    const errorResponse = {
+      data: null,
+      success: false,
+      message: "Failed to retrieve users",
+      error: {
+        code: "USER_FETCH_ERROR",
+        message: error instanceof Error ? error.message : "Unknown error"
+      }
+    };
+    return c.json(errorResponse, 500);
+  }
+});
+users.get("/:id", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const userService = new UserService(c.env.DB);
+    const user = await userService.getUserById(id);
+    if (!user) {
+      const errorResponse = {
+        data: null,
+        success: false,
+        message: "User not found",
+        error: {
+          code: "USER_NOT_FOUND",
+          message: `User with id ${id} does not exist`
+        }
+      };
+      return c.json(errorResponse, 404);
+    }
+    const response = {
+      data: user,
+      success: true,
+      message: "User retrieved successfully"
+    };
+    return c.json(response);
+  } catch (error) {
+    const errorResponse = {
+      data: null,
+      success: false,
+      message: "Failed to retrieve user",
+      error: {
+        code: "USER_FETCH_ERROR",
+        message: error instanceof Error ? error.message : "Unknown error"
+      }
+    };
+    return c.json(errorResponse, 500);
+  }
+});
+users.post("/", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { email, name } = body;
+    if (!email || !name) {
+      const errorResponse = {
+        data: null,
+        success: false,
+        message: "Validation failed",
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "Email and name are required",
+          details: { email: !email ? "required" : void 0, name: !name ? "required" : void 0 }
+        }
+      };
+      return c.json(errorResponse, 400);
+    }
+    const userService = new UserService(c.env.DB);
+    const user = await userService.createUser({ email, name });
+    const response = {
+      data: user,
+      success: true,
+      message: "User created successfully"
+    };
+    return c.json(response, 201);
+  } catch (error) {
+    const errorResponse = {
+      data: null,
+      success: false,
+      message: "Failed to create user",
+      error: {
+        code: "USER_CREATE_ERROR",
+        message: error instanceof Error ? error.message : "Unknown error"
+      }
+    };
+    const statusCode = error instanceof Error && error.message.includes("already exists") ? 409 : 500;
+    return c.json(errorResponse, statusCode);
+  }
+});
+users.put("/:id", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const body = await c.req.json();
+    const { email, name } = body;
+    const userService = new UserService(c.env.DB);
+    const user = await userService.updateUser(id, { email, name });
+    if (!user) {
+      const errorResponse = {
+        data: null,
+        success: false,
+        message: "User not found",
+        error: {
+          code: "USER_NOT_FOUND",
+          message: `User with id ${id} does not exist`
+        }
+      };
+      return c.json(errorResponse, 404);
+    }
+    const response = {
+      data: user,
+      success: true,
+      message: "User updated successfully"
+    };
+    return c.json(response);
+  } catch (error) {
+    const errorResponse = {
+      data: null,
+      success: false,
+      message: "Failed to update user",
+      error: {
+        code: "USER_UPDATE_ERROR",
+        message: error instanceof Error ? error.message : "Unknown error"
+      }
+    };
+    return c.json(errorResponse, 500);
+  }
+});
+users.delete("/:id", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const userService = new UserService(c.env.DB);
+    const deleted = await userService.deleteUser(id);
+    if (!deleted) {
+      const errorResponse = {
+        data: null,
+        success: false,
+        message: "User not found",
+        error: {
+          code: "USER_NOT_FOUND",
+          message: `User with id ${id} does not exist`
+        }
+      };
+      return c.json(errorResponse, 404);
+    }
+    const response = {
+      data: { id },
+      success: true,
+      message: "User deleted successfully"
+    };
+    return c.json(response);
+  } catch (error) {
+    const errorResponse = {
+      data: null,
+      success: false,
+      message: "Failed to delete user",
+      error: {
+        code: "USER_DELETE_ERROR",
+        message: error instanceof Error ? error.message : "Unknown error"
+      }
+    };
+    return c.json(errorResponse, 500);
+  }
+});
+var users_default = users;
+
 // src/index.ts
 var app = new Hono2();
+app.use("/*", cors());
 app.get("/", (c) => {
-  return c.text("Hello Hono!");
+  return c.json({
+    success: true,
+    message: "Chronos API is running",
+    timestamp: (/* @__PURE__ */ new Date()).toISOString()
+  });
 });
-app.get("/api/health", (c) => {
-  return c.json({ status: "ok", timestamp: (/* @__PURE__ */ new Date()).toISOString() });
-});
+app.route("/api/users", users_default);
 var src_default = app;
 
 // ../../node_modules/.bun/wrangler@4.50.0/node_modules/wrangler/templates/middleware/middleware-ensure-req-body-drained.ts
@@ -1593,7 +1999,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-Xmw7cN/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-k3guZs/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -1625,7 +2031,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-Xmw7cN/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-k3guZs/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;

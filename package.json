@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "bun --filter '*' dev",
     "build": "bun --filter '*' build",
+    "migrate:local": "bun --filter @chronos/backend migrate:local",
     "migrate:dev": "bun --filter @chronos/backend migrate:dev",
     "migrate:pre": "bun --filter @chronos/backend migrate:pre",
     "migrate:prod": "bun --filter @chronos/backend migrate:prod"

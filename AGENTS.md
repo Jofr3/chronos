@@ -79,7 +79,13 @@ chronos-ws/
 ├── apps/
 │   ├── backend/              # @chronos/backend
 │   │   ├── src/
+│   │   │   ├── db/
+│   │   │   │   └── queries/  # Database query layer (data access)
+│   │   │   ├── services/     # Business logic layer
+│   │   │   ├── routes/       # HTTP route handlers
+│   │   │   ├── types/        # Backend-specific types (env bindings)
 │   │   │   └── index.ts      # Hono app entry point
+│   │   ├── migrations/       # D1 database migrations
 │   │   ├── package.json      # Backend dependencies
 │   │   ├── tsconfig.json     # Backend TS config
 │   │   └── wrangler.toml     # Cloudflare Workers config
@@ -96,7 +102,10 @@ chronos-ws/
 ├── packages/
 │   └── types/                # @chronos/types
 │       ├── src/
-│       │   └── index.ts      # Shared type definitions
+│       │   ├── index.ts      # Barrel exports
+│       │   ├── user.ts       # User domain types
+│       │   ├── api.ts        # API response types
+│       │   └── database.ts   # D1 database types
 │       ├── package.json      # Types package config
 │       └── tsconfig.json     # Types TS config
 ├── package.json              # Root workspace config
@@ -110,10 +119,15 @@ chronos-ws/
 ### Backend (@chronos/backend)
 - **Framework**: Hono 4.x (fast, lightweight web framework)
 - **Runtime**: Bun (Node.js compatible, but optimized for Bun)
+- **Database**: Cloudflare D1 (SQLite-compatible)
 - **Port**: 3000 (in dev mode)
 - **Entry**: `src/index.ts` exports a Hono app instance
 - **Hot reload**: Enabled via `bun run --hot`
 - **Build output**: `dist/index.js` (single file)
+- **Architecture**: Three-layer architecture (queries → services → routes)
+  - **Queries** (`src/db/queries/`): Pure database operations, SQL queries
+  - **Services** (`src/services/`): Business logic, validation, orchestration
+  - **Routes** (`src/routes/`): HTTP handlers, request/response formatting
 
 ### Frontend (@chronos/frontend)
 - **Framework**: Qwik 1.x (resumable, no hydration)
@@ -125,9 +139,13 @@ chronos-ws/
 
 ### Types (@chronos/types)
 - **Purpose**: Shared TypeScript interfaces and types
-- **Current types**: `User`, `ApiResponse`, `ApiError`
+- **Structure**: Organized by domain (user, api, database)
+- **Current types**: `User`, `ApiResponse`, `ApiError`, `D1Database`, `D1Result`
 - **Usage**: Imported in both backend and frontend
 - **Versioning**: Uses `workspace:*` protocol for local development
+- **Import styles**: 
+  - Barrel: `import type { User } from "@chronos/types"`
+  - Direct: `import type { User } from "@chronos/types/user"`
 
 ## Architecture Guidelines
 
@@ -137,6 +155,13 @@ chronos-ws/
 - Use proper HTTP status codes (200, 201, 400, 404, 500, etc.)
 - Handle errors with `ApiError` format
 - Keep routes organized (use route groups if app grows)
+- **Three-layer architecture**:
+  1. **Queries layer**: Database operations only, no validation
+  2. **Services layer**: Business logic, validation, orchestration
+  3. **Routes layer**: HTTP handling, response formatting
+- **Database naming**: DB uses snake_case, TypeScript uses camelCase (map in queries)
+- **Prepared statements**: Always use `.bind()` to prevent SQL injection
+- **Type safety**: Type all DB query results, map to shared types from `@chronos/types`
 
 ### Component Design (Frontend)
 - Keep components small and focused (single responsibility)

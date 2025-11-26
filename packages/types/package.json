@@ -2,7 +2,10 @@
   "name": "@chronos/types",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./user": "./src/user.ts",
+    "./api": "./src/api.ts",
+    "./database": "./src/database.ts"
   },
   "devDependencies": {
     "typescript": "^5"
