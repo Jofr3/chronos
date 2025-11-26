@@ -9,10 +9,10 @@
 
     "build": "bun build src/index.ts --outfile=dist/index.js --target=bun",
 
-    "migrate:local":"bunx wrangler d1 execute DB --local --file=migrations/schema.sql",
-    "migrate:dev":"bunx wrangler d1 execute DB --remote --env development --file=migrations/schema.sql",
-    "migrate:pre":"bunx wrangler d1 execute DB --remote --env preview --file=migrations/schema.sql",
-    "migrate:prod":"bunx wrangler d1 execute DB --remote --file=migrations/schema.sql"
+    "migrate:local":"bunx wrangler d1 execute DB --local",
+    "migrate:dev":"bunx wrangler d1 execute DB --remote --env development",
+    "migrate:pre":"bunx wrangler d1 execute DB --remote --env preview",
+    "migrate:prod":"bunx wrangler d1 execute DB --remote"
   },
   "dependencies": {
     "@chronos/types": "workspace:*",
