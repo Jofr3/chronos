@@ -5,7 +5,7 @@ compatibility_date = "2025-11-24"
 [[d1_databases]]
 binding = "DB"
 database_name = "chronos-database"
-database_id = "310fa875-8a57-4dc6-a36c-a3afd2c7496a"
+database_id = "c2ac623f-5a57-4c1e-9d01-731a4ab8f97f"
 
 [env.development]
 [[env.development.d1_databases]]
@@ -17,4 +17,4 @@ database_id = "046daf02-adb5-400c-9737-afbf90d03d59"
 [[env.preview.d1_databases]]
 binding = "DB"
 database_name = "chronos-database-preview"
-database_id = "046daf02-adb5-400c-9737-afbf90d03d59"
+database_id = "2659ab56-6f7a-41e8-9073-8e7436a9c46f"
