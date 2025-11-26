@@ -1,2 +1,12 @@
 # deps
 node_modules/
+
+# wrangler
+.wrangler/
+wrangler.toml.bak
+
+# build output
+dist/
+
+# logs
+*.log
