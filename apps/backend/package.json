@@ -2,9 +2,15 @@
   "name": "@chronos/backend",
   "type": "module",
   "scripts": {
-    "dev": "bun run --hot src/index.ts",
+    "dev:local": "bun run --hot src/index.ts",
+    "dev:remote": "bunx wrangler dev --env development",
+    "pre:remote": "bunx wrangler dev --env preview",
+    "prod:remote": "bunx wrangler dev",
+
     "build": "bun build src/index.ts --outfile=dist/index.js --target=bun",
-    "deploy": "wrangler deploy"
+    "migrate:dev":"bunx wrangler d1 execute chronos-database-development --remote --env development --file=migrations/schema.sql",
+    "migrate:pre":"bunx wrangler d1 execute chronos-database-preview --remote --env preview --file=migrations/schema.sql",
+    "migrate:prod":"bunx wrangler d1 execute chronos-database --remote --file=migrations/schema.sql"
   },
   "dependencies": {
     "@chronos/types": "workspace:*",

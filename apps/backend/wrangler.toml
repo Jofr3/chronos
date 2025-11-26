@@ -1,3 +1,20 @@
 name = "chronos-backend"
 main = "src/index.ts"
 compatibility_date = "2025-11-24"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "chronos-database"
+database_id = "310fa875-8a57-4dc6-a36c-a3afd2c7496a"
+
+[env.development]
+[[env.development.d1_databases]]
+binding = "DB"
+database_name = "chronos-database-development"
+database_id = "046daf02-adb5-400c-9737-afbf90d03d59"
+
+[env.preview]
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "chronos-database-preview"
+database_id = "046daf02-adb5-400c-9737-afbf90d03d59"
