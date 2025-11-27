@@ -1,27 +1,19 @@
 import type { D1 } from "@chronos/types/database";
 import type { User } from "@chronos/types/user";
 
-export interface UserRow {
-  id: string;
-  email: string;
-  name: string;
-  created_at: string;
-  updated_at: string;
-}
-
 /**
  * Get all users from the database
  */
 
 export async function getAllUsers(db: D1): Promise<User[]> {
   const stmt = db.prepare("SELECT * FROM users ORDER BY created_at DESC");
-  const result = await stmt.all<UserRow>();
+  const result = await stmt.all<User>();
 
   if (!result.success) {
     throw new Error(result.error || "Failed to fetch users");
   }
 
-  return result.results.map(mapUserRowToUser);
+  return result.results.map(mapUserToUser);
 }
 
 /**
@@ -29,13 +21,13 @@ export async function getAllUsers(db: D1): Promise<User[]> {
  */
 export async function getUserById(db: D1, id: string): Promise<User | null> {
   const stmt = db.prepare("SELECT * FROM users WHERE id = ?").bind(id);
-  const user = await stmt.first<UserRow>();
+  const user = await stmt.first<User>();
 
   if (!user) {
     return null;
   }
 
-  return mapUserRowToUser(user);
+  return mapUserToUser(user);
 }
 
 /**
@@ -43,13 +35,27 @@ export async function getUserById(db: D1, id: string): Promise<User | null> {
  */
 export async function getUserByEmail(db: D1, email: string): Promise<User | null> {
   const stmt = db.prepare("SELECT * FROM users WHERE email = ?").bind(email);
-  const user = await stmt.first<UserRow>();
+  const user = await stmt.first<User>();
 
   if (!user) {
     return null;
   }
 
-  return mapUserRowToUser(user);
+  return mapUserToUser(user);
+}
+
+/**
+ * Get a user by username
+ */
+export async function getUserByUsername(db: D1, username: string): Promise<User | null> {
+  const stmt = db.prepare("SELECT * FROM users WHERE username = ?").bind(username);
+  const user = await stmt.first<User>();
+
+  if (!user) {
+    return null;
+  }
+
+  return mapUserToUser(user);
 }
 
 /**
@@ -57,14 +63,11 @@ export async function getUserByEmail(db: D1, email: string): Promise<User | null
  */
 export async function createUser(
   db: D1,
-  data: { email: string; name: string }
+  data: { email: string; username: string; first_name?: string; last_name?: string }
 ): Promise<User> {
-  const id = crypto.randomUUID();
-  const now = new Date().toISOString();
-
   const stmt = db.prepare(
-    "INSERT INTO users (id, email, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)"
-  ).bind(id, data.email, data.name, now, now);
+    "INSERT INTO users (email, username, first_name, last_name) VALUES (?, ?, ?, ?)"
+  ).bind(data.email, data.username, data.first_name || null, data.last_name || null);
 
   const result = await stmt.run();
 
@@ -72,13 +75,13 @@ export async function createUser(
     throw new Error(result.error || "Failed to create user");
   }
 
-  return {
-    id,
-    email: data.email,
-    name: data.name,
-    createdAt: new Date(now),
-    updatedAt: new Date(now),
-  };
+  // Fetch the created user to get the auto-generated ID
+  const createdUser = await getUserByEmail(db, data.email);
+  if (!createdUser) {
+    throw new Error("Failed to retrieve created user");
+  }
+
+  return createdUser;
 }
 
 /**
@@ -87,7 +90,7 @@ export async function createUser(
 export async function updateUser(
   db: D1,
   id: string,
-  data: Partial<{ email: string; name: string }>
+  data: Partial<{ email: string; username: string; first_name: string; last_name: string }>
 ): Promise<User | null> {
   const existingUser = await getUserById(db, id);
   if (!existingUser) {
@@ -103,9 +106,19 @@ export async function updateUser(
     values.push(data.email);
   }
 
-  if (data.name !== undefined) {
-    updates.push("name = ?");
-    values.push(data.name);
+  if (data.username !== undefined) {
+    updates.push("username = ?");
+    values.push(data.username);
+  }
+
+  if (data.first_name !== undefined) {
+    updates.push("first_name = ?");
+    values.push(data.first_name);
+  }
+
+  if (data.last_name !== undefined) {
+    updates.push("last_name = ?");
+    values.push(data.last_name);
   }
 
   if (updates.length === 0) {
@@ -146,12 +159,15 @@ export async function deleteUser(db: D1, id: string): Promise<boolean> {
 /**
  * Helper function to map database row to User type
  */
-function mapUserRowToUser(row: UserRow): User {
+function mapUserToUser(row: User): User {
   return {
-    id: row.id,
+    id: row.id.toString(),
     email: row.email,
-    name: row.name,
-    createdAt: new Date(row.created_at),
-    updatedAt: new Date(row.updated_at),
+    username: row.username,
+    first_name: row.first_name || "",
+    last_name: row.last_name || "",
+    created_at: new Date(row.created_at),
+    updated_at: row.updated_at ? new Date(row.updated_at) : new Date(row.created_at),
+    deleted_at: row.deleted_at ? new Date(row.deleted_at) : new Date(),
   };
 }

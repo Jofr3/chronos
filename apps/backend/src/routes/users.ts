@@ -78,17 +78,20 @@ users.get("/:id", async (c) => {
 users.post("/", async (c) => {
   try {
     const body = await c.req.json();
-    const { email, name } = body;
+    const { email, username, first_name, last_name } = body;
 
-    if (!email || !name) {
+    if (!email || !username) {
       const errorResponse: ApiResponse<null> & { error: ApiError } = {
         data: null,
         success: false,
         message: "Validation failed",
         error: {
           code: "VALIDATION_ERROR",
-          message: "Email and name are required",
-          details: { email: !email ? "required" : undefined, name: !name ? "required" : undefined },
+          message: "Email and username are required",
+          details: { 
+            email: !email ? "required" : undefined, 
+            username: !username ? "required" : undefined 
+          },
         },
       };
 
@@ -96,7 +99,7 @@ users.post("/", async (c) => {
     }
 
     const userService = new UserService(c.env.DB);
-    const user = await userService.createUser({ email, name });
+    const user = await userService.createUser({ email, username, first_name, last_name });
 
     const response: ApiResponse<User> = {
       data: user,
@@ -125,10 +128,10 @@ users.put("/:id", async (c) => {
   try {
     const id = c.req.param("id");
     const body = await c.req.json();
-    const { email, name } = body;
+    const { email, username, first_name, last_name } = body;
 
     const userService = new UserService(c.env.DB);
-    const user = await userService.updateUser(id, { email, name });
+    const user = await userService.updateUser(id, { email, username, first_name, last_name });
 
     if (!user) {
       const errorResponse: ApiResponse<null> & { error: ApiError } = {
