@@ -1,6 +1,5 @@
-// Environment bindings for Cloudflare Workers
-import type { D1Database } from "@chronos/types/database";
+import type { D1 } from "@chronos/types/database";
 
 export interface Env {
-  DB: D1Database;
+  DB: D1;
 }

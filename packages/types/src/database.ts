@@ -1,6 +1,4 @@
-// Cloudflare D1 Database types
-
-export interface D1Database {
+export interface D1 {
   prepare(query: string): D1PreparedStatement;
   dump(): Promise<ArrayBuffer>;
   batch<T = unknown>(statements: D1PreparedStatement[]): Promise<D1Result<T>[]>;

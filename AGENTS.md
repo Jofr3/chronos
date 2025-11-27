@@ -140,7 +140,7 @@ chronos-ws/
 ### Types (@chronos/types)
 - **Purpose**: Shared TypeScript interfaces and types
 - **Structure**: Organized by domain (user, api, database)
-- **Current types**: `User`, `ApiResponse`, `ApiError`, `D1Database`, `D1Result`
+- **Current types**: `User`, `ApiResponse`, `ApiError`, `D1`, `D1Result`
 - **Usage**: Imported in both backend and frontend
 - **Versioning**: Uses `workspace:*` protocol for local development
 - **Import styles**: 

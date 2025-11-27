@@ -1,4 +1,3 @@
-// User routes
 import { Hono } from "hono";
 import type { Env } from "../types/env";
 import type { ApiResponse, ApiError } from "@chronos/types/api";
@@ -7,7 +6,6 @@ import { UserService } from "../services/user.service";
 
 const users = new Hono<{ Bindings: Env }>();
 
-// GET /api/users - Get all users
 users.get("/", async (c) => {
   try {
     const userService = new UserService(c.env.DB);
@@ -35,7 +33,6 @@ users.get("/", async (c) => {
   }
 });
 
-// GET /api/users/:id - Get user by ID
 users.get("/:id", async (c) => {
   try {
     const id = c.req.param("id");
@@ -78,7 +75,6 @@ users.get("/:id", async (c) => {
   }
 });
 
-// POST /api/users - Create a new user
 users.post("/", async (c) => {
   try {
     const body = await c.req.json();
@@ -125,7 +121,6 @@ users.post("/", async (c) => {
   }
 });
 
-// PUT /api/users/:id - Update a user
 users.put("/:id", async (c) => {
   try {
     const id = c.req.param("id");
@@ -171,7 +166,6 @@ users.put("/:id", async (c) => {
   }
 });
 
-// DELETE /api/users/:id - Delete a user
 users.delete("/:id", async (c) => {
   try {
     const id = c.req.param("id");

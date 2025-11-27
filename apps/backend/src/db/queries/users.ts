@@ -1,4 +1,4 @@
-import type { D1Database } from "@chronos/types/database";
+import type { D1 } from "@chronos/types/database";
 import type { User } from "@chronos/types/user";
 
 export interface UserRow {
@@ -13,7 +13,7 @@ export interface UserRow {
  * Get all users from the database
  */
 
-export async function getAllUsers(db: D1Database): Promise<User[]> {
+export async function getAllUsers(db: D1): Promise<User[]> {
   const stmt = db.prepare("SELECT * FROM users ORDER BY created_at DESC");
   const result = await stmt.all<UserRow>();
 
@@ -27,7 +27,7 @@ export async function getAllUsers(db: D1Database): Promise<User[]> {
 /**
  * Get a user by ID
  */
-export async function getUserById(db: D1Database, id: string): Promise<User | null> {
+export async function getUserById(db: D1, id: string): Promise<User | null> {
   const stmt = db.prepare("SELECT * FROM users WHERE id = ?").bind(id);
   const user = await stmt.first<UserRow>();
 
@@ -41,7 +41,7 @@ export async function getUserById(db: D1Database, id: string): Promise<User | nu
 /**
  * Get a user by email
  */
-export async function getUserByEmail(db: D1Database, email: string): Promise<User | null> {
+export async function getUserByEmail(db: D1, email: string): Promise<User | null> {
   const stmt = db.prepare("SELECT * FROM users WHERE email = ?").bind(email);
   const user = await stmt.first<UserRow>();
 
@@ -56,7 +56,7 @@ export async function getUserByEmail(db: D1Database, email: string): Promise<Use
  * Create a new user
  */
 export async function createUser(
-  db: D1Database,
+  db: D1,
   data: { email: string; name: string }
 ): Promise<User> {
   const id = crypto.randomUUID();
@@ -85,7 +85,7 @@ export async function createUser(
  * Update a user
  */
 export async function updateUser(
-  db: D1Database,
+  db: D1,
   id: string,
   data: Partial<{ email: string; name: string }>
 ): Promise<User | null> {
@@ -132,7 +132,7 @@ export async function updateUser(
 /**
  * Delete a user
  */
-export async function deleteUser(db: D1Database, id: string): Promise<boolean> {
+export async function deleteUser(db: D1, id: string): Promise<boolean> {
   const stmt = db.prepare("DELETE FROM users WHERE id = ?").bind(id);
   const result = await stmt.run();
 

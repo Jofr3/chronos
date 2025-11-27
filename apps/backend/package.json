@@ -2,7 +2,7 @@
   "name": "@chronos/backend",
   "type": "module",
   "scripts": {
-    "dev:local": "bunx wrangler dev --local",
+    "dev": "bunx wrangler dev --local",
     "dev:remote": "bunx wrangler dev --env development",
     "pre:remote": "bunx wrangler dev --env preview",
     "prod:remote": "bunx wrangler dev",
