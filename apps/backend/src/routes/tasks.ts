@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 import type { Env } from "../types/env";
 import { TaskService } from "../services/task.service";
-import { AuthService } from "../services/auth.service";
 import type { CreateTaskListRequest, CreateTaskRequest, UpdateTaskRequest, UpdateTaskListRequest } from "@chronos/types";
 
 const tasks = new Hono<{ Bindings: Env }>();
@@ -13,11 +12,46 @@ async function getUserIdFromToken(authHeader: string | undefined, jwtSecret: str
   }
   
   const token = authHeader.slice(7);
-  const authService = new AuthService({} as any, jwtSecret); // DB not needed for verify
   
   try {
-    const payload = await authService.verifyToken(token);
-    if (!payload) return null;
+    // Decode JWT token manually (only need payload verification, no DB needed)
+    const parts = token.split(".");
+    if (parts.length !== 3) {
+      return null;
+    }
+
+    const [encodedHeader, encodedPayload, signature] = parts;
+
+    // Verify signature
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(jwtSecret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+
+    const signatureData = await crypto.subtle.sign("HMAC", key, encoder.encode(`${encodedHeader}.${encodedPayload}`));
+    const expectedSignature = btoa(String.fromCharCode(...new Uint8Array(signatureData)))
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
+
+    if (signature !== expectedSignature) {
+      return null;
+    }
+
+    // Decode and parse payload
+    const pad = encodedPayload.length % 4;
+    const paddedPayload = pad ? encodedPayload + "=".repeat(4 - pad) : encodedPayload;
+    const payload = JSON.parse(atob(paddedPayload.replace(/-/g, "+").replace(/_/g, "/")));
+
+    // Check expiration
+    if (payload.exp < Math.floor(Date.now() / 1000)) {
+      return null;
+    }
+
     return payload.sub; // 'sub' contains the user ID
   } catch {
     return null;

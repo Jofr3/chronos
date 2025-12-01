@@ -108,7 +108,7 @@ function mapRowToUserWithPassword(row: UserRow): UserWithPassword {
     last_name: row.last_name || "",
     password_hash: row.password_hash,
     created_at: new Date(row.created_at),
-    updated_at: row.updated_at ? new Date(row.updated_at) : new Date(row.created_at),
-    deleted_at: row.deleted_at ? new Date(row.deleted_at) : new Date(),
+    updated_at: row.updated_at ? new Date(row.updated_at) : null,
+    deleted_at: row.deleted_at ? new Date(row.deleted_at) : null,
   };
 }

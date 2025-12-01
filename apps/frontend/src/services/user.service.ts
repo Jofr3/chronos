@@ -21,7 +21,6 @@ class UserService {
    * @returns Promise with array of users
    */
   async getAllUsers(): Promise<User[]> {
-    console.log(this.baseUrl);
     const response = await fetch(`${this.baseUrl}/api/users`);
     const data: ApiResponse<User[]> | ApiErrorResponse = await response.json();
 

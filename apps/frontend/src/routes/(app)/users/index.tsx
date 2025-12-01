@@ -45,62 +45,80 @@ export default component$(() => {
 
   return (
     <div>
-      <h1 style="margin-top: 0; font-size: 32px; color: #1e293b;">Users</h1>
+      <h1 style="margin-top: 0; font-size: 36px; color: var(--text-primary); font-weight: 700;">Users</h1>
 
       {/* Create User Form */}
-      <div style="margin-bottom: 30px; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-        <h2 style="margin-top: 0;">Create New User</h2>
+      <div style="margin-bottom: 32px; padding: 28px; background: var(--bg-secondary); border-radius: 12px; box-shadow: var(--shadow-md); border: 1px solid var(--border-color);">
+        <h2 style="margin-top: 0; font-size: 22px; color: var(--text-primary); font-weight: 600; margin-bottom: 24px;">Create New User</h2>
         
-        <Form action={createUserAction} style="display: flex; flex-direction: column; gap: 15px; max-width: 500px;">
-          <div style="display: flex; flex-direction: column; gap: 5px;">
-            <label for="email" style="font-weight: 500;">Email:</label>
+        <Form action={createUserAction} style="display: flex; flex-direction: column; gap: 20px; max-width: 600px;">
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <label for="email" style="font-weight: 500; color: var(--text-primary); font-size: 14px;">Email:</label>
             <input
               type="email"
               id="email"
               name="email"
               required
-              style="padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;"
+              style="padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background: var(--bg-tertiary); color: var(--text-primary); transition: border-color 0.2s;"
+              onFocus$={(e) => (e.target as HTMLElement).style.borderColor = "var(--accent-primary)"}
+              onBlur$={(e) => (e.target as HTMLElement).style.borderColor = "var(--border-color)"}
               placeholder="user@example.com"
             />
           </div>
 
-          <div style="display: flex; flex-direction: column; gap: 5px;">
-            <label for="username" style="font-weight: 500;">Username:</label>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <label for="username" style="font-weight: 500; color: var(--text-primary); font-size: 14px;">Username:</label>
             <input
               type="text"
               id="username"
               name="username"
               required
-              style="padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;"
+              style="padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background: var(--bg-tertiary); color: var(--text-primary); transition: border-color 0.2s;"
+              onFocus$={(e) => (e.target as HTMLElement).style.borderColor = "var(--accent-primary)"}
+              onBlur$={(e) => (e.target as HTMLElement).style.borderColor = "var(--border-color)"}
               placeholder="johndoe"
             />
           </div>
 
-          <div style="display: flex; flex-direction: column; gap: 5px;">
-            <label for="first_name" style="font-weight: 500;">First Name (optional):</label>
-            <input
-              type="text"
-              id="first_name"
-              name="first_name"
-              style="padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;"
-              placeholder="John"
-            />
-          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <label for="first_name" style="font-weight: 500; color: var(--text-primary); font-size: 14px;">First Name <span style="color: var(--text-tertiary); font-weight: 400;">(optional)</span>:</label>
+              <input
+                type="text"
+                id="first_name"
+                name="first_name"
+                style="padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background: var(--bg-tertiary); color: var(--text-primary); transition: border-color 0.2s;"
+                onFocus$={(e) => (e.target as HTMLElement).style.borderColor = "var(--accent-secondary)"}
+                onBlur$={(e) => (e.target as HTMLElement).style.borderColor = "var(--border-color)"}
+                placeholder="John"
+              />
+            </div>
 
-          <div style="display: flex; flex-direction: column; gap: 5px;">
-            <label for="last_name" style="font-weight: 500;">Last Name (optional):</label>
-            <input
-              type="text"
-              id="last_name"
-              name="last_name"
-              style="padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;"
-              placeholder="Doe"
-            />
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <label for="last_name" style="font-weight: 500; color: var(--text-primary); font-size: 14px;">Last Name <span style="color: var(--text-tertiary); font-weight: 400;">(optional)</span>:</label>
+              <input
+                type="text"
+                id="last_name"
+                name="last_name"
+                style="padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background: var(--bg-tertiary); color: var(--text-primary); transition: border-color 0.2s;"
+                onFocus$={(e) => (e.target as HTMLElement).style.borderColor = "var(--accent-secondary)"}
+                onBlur$={(e) => (e.target as HTMLElement).style.borderColor = "var(--border-color)"}
+                placeholder="Doe"
+              />
+            </div>
           </div>
 
           <button
             type="submit"
-            style="padding: 10px 20px; background: #0070f3; color: white; border: none; border-radius: 4px; font-size: 14px; font-weight: 500; cursor: pointer; align-self: flex-start;"
+            style="padding: 12px 28px; background: var(--accent-gradient); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; align-self: flex-start; box-shadow: var(--shadow-sm); transition: all 0.2s;"
+            onMouseOver$={(e) => {
+              (e.target as HTMLElement).style.transform = "translateY(-2px)";
+              (e.target as HTMLElement).style.boxShadow = "var(--shadow-accent)";
+            }}
+            onMouseOut$={(e) => {
+              (e.target as HTMLElement).style.transform = "translateY(0)";
+              (e.target as HTMLElement).style.boxShadow = "var(--shadow-sm)";
+            }}
             disabled={createUserAction.isRunning}
           >
             {createUserAction.isRunning ? "Creating..." : "Create User"}
@@ -108,13 +126,13 @@ export default component$(() => {
         </Form>
 
         {createUserAction.value?.success && (
-          <div style="margin-top: 15px; padding: 10px; background: #d4edda; border: 1px solid #c3e6cb; color: #155724; border-radius: 4px;">
+          <div style="margin-top: 20px; padding: 14px 18px; background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success); color: var(--success); border-radius: 8px; font-weight: 500;">
             User created successfully!
           </div>
         )}
 
         {createUserAction.value?.failed && (
-          <div style="margin-top: 15px; padding: 10px; background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; border-radius: 4px;">
+          <div style="margin-top: 20px; padding: 14px 18px; background: rgba(239, 68, 68, 0.1); border: 1px solid var(--error); color: var(--error); border-radius: 8px; font-weight: 500;">
             Error: {createUserAction.value.message}
           </div>
         )}
@@ -122,48 +140,60 @@ export default component$(() => {
       
       {/* Error loading users */}
       {usersSignal.value.error && (
-        <div style="color: red; padding: 10px; background: #fee; border: 1px solid #fcc; border-radius: 4px; margin-bottom: 20px;">
+        <div style="color: var(--error); padding: 14px 18px; background: rgba(239, 68, 68, 0.1); border: 1px solid var(--error); border-radius: 10px; margin-bottom: 24px; font-weight: 500;">
           Error: {usersSignal.value.error}
         </div>
       )}
 
       {/* Empty state */}
       {usersSignal.value.users.length === 0 && !usersSignal.value.error && (
-        <div style="padding: 10px; background: white; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-          No users found.
+        <div style="padding: 48px 24px; background: var(--bg-secondary); border-radius: 12px; box-shadow: var(--shadow-md); border: 1px solid var(--border-color); text-align: center;">
+          <div style="font-size: 48px; margin-bottom: 16px;">👥</div>
+          <div style="font-size: 18px; color: var(--text-primary); font-weight: 500; margin-bottom: 8px;">No users found</div>
+          <div style="color: var(--text-secondary);">Create your first user above to get started.</div>
         </div>
       )}
 
       {/* Users table */}
       {usersSignal.value.users.length > 0 && (
-        <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-          <p style="font-weight: 500;">Total users: {usersSignal.value.users.length}</p>
-          <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-            <thead>
-              <tr style="background: #f0f0f0; border-bottom: 2px solid #ddd;">
-                <th style="padding: 12px; text-align: left;">ID</th>
-                <th style="padding: 12px; text-align: left;">Username</th>
-                <th style="padding: 12px; text-align: left;">Email</th>
-                <th style="padding: 12px; text-align: left;">First Name</th>
-                <th style="padding: 12px; text-align: left;">Last Name</th>
-                <th style="padding: 12px; text-align: left;">Created At</th>
-              </tr>
-            </thead>
-            <tbody>
-              {usersSignal.value.users.map((user) => (
-                <tr key={user.id} style="border-bottom: 1px solid #eee;">
-                  <td style="padding: 12px; font-family: monospace; font-size: 12px;">{user.id}</td>
-                  <td style="padding: 12px;">{user.username}</td>
-                  <td style="padding: 12px;">{user.email}</td>
-                  <td style="padding: 12px;">{user.first_name || "-"}</td>
-                  <td style="padding: 12px;">{user.last_name || "-"}</td>
-                  <td style="padding: 12px;">
-                    {new Date(user.created_at).toLocaleString()}
-                  </td>
+        <div style="background: var(--bg-secondary); padding: 28px; border-radius: 12px; box-shadow: var(--shadow-md); border: 1px solid var(--border-color);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+            <h3 style="margin: 0; font-size: 20px; color: var(--text-primary); font-weight: 600;">All Users</h3>
+            <span style="background: var(--accent-gradient); color: white; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;">
+              {usersSignal.value.users.length} {usersSignal.value.users.length === 1 ? 'user' : 'users'}
+            </span>
+          </div>
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: separate; border-spacing: 0;">
+              <thead>
+                <tr style="background: var(--bg-tertiary);">
+                  <th style="padding: 14px 16px; text-align: left; color: var(--text-secondary); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--border-color); border-top-left-radius: 8px;">ID</th>
+                  <th style="padding: 14px 16px; text-align: left; color: var(--text-secondary); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--border-color);">Username</th>
+                  <th style="padding: 14px 16px; text-align: left; color: var(--text-secondary); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--border-color);">Email</th>
+                  <th style="padding: 14px 16px; text-align: left; color: var(--text-secondary); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--border-color);">First Name</th>
+                  <th style="padding: 14px 16px; text-align: left; color: var(--text-secondary); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--border-color);">Last Name</th>
+                  <th style="padding: 14px 16px; text-align: left; color: var(--text-secondary); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--border-color); border-top-right-radius: 8px;">Created At</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {usersSignal.value.users.map((user, index) => (
+                  <tr key={user.id} style="border-bottom: 1px solid var(--border-color); transition: background 0.2s;"
+                    onMouseOver$={(e) => (e.currentTarget as HTMLElement).style.background = "var(--bg-elevated)"}
+                    onMouseOut$={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}
+                  >
+                    <td style="padding: 16px; font-family: monospace; font-size: 12px; color: var(--text-secondary);">{user.id}</td>
+                    <td style="padding: 16px; color: var(--text-primary); font-weight: 500;">{user.username}</td>
+                    <td style="padding: 16px; color: var(--accent-secondary); font-weight: 500;">{user.email}</td>
+                    <td style="padding: 16px; color: var(--text-secondary);">{user.first_name || "-"}</td>
+                    <td style="padding: 16px; color: var(--text-secondary);">{user.last_name || "-"}</td>
+                    <td style="padding: 16px; color: var(--text-tertiary); font-size: 13px;">
+                      {new Date(user.created_at).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

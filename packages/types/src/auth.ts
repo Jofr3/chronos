@@ -41,6 +41,6 @@ export interface UserWithPassword {
   last_name: string;
   password_hash: string | null;
   created_at: Date;
-  updated_at: Date;
-  deleted_at: Date;
+  updated_at: Date | null;
+  deleted_at: Date | null;
 }

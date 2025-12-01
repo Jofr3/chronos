@@ -18,8 +18,8 @@ export default component$(() => {
   useRedirect();
   
   return (
-    <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center;">
-      <p>Redirecting...</p>
+    <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg-primary);">
+      <p style="color: var(--text-secondary); font-size: 16px;">Redirecting...</p>
     </div>
   );
 });

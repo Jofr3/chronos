@@ -16,7 +16,6 @@ export const useLogin = routeAction$(
   async (data, { fail, cookie }) => {
     try {
       const apiUrl = getApiBaseUrl();
-      console.log("[Login] Attempting login to:", `${apiUrl}/api/auth/login`);
       
       const response = await fetch(`${apiUrl}/api/auth/login`, {
         method: "POST",
@@ -29,21 +28,16 @@ export const useLogin = routeAction$(
         }),
       });
 
-      console.log("[Login] Response status:", response.status);
-
       const result: ApiResponse<AuthResponse> | ApiErrorResponse = await response.json();
-      console.log("[Login] Response success:", result.success);
 
       if (!response.ok || !result.success) {
         const errorData = result as ApiErrorResponse;
-        console.log("[Login] Login failed:", errorData.error?.message || errorData.message);
         return fail(400, {
           message: errorData.error?.message || errorData.message || "Login failed",
         });
       }
 
       const authData = (result as ApiResponse<AuthResponse>).data;
-      console.log("[Login] Got token, length:", authData.token?.length);
 
       // Set the auth token as a cookie
       cookie.set("chronos_auth_token", authData.token, {
@@ -51,8 +45,6 @@ export const useLogin = routeAction$(
         sameSite: "lax",
         maxAge: 60 * 60 * 24 * 7, // 7 days
       });
-      
-      console.log("[Login] Cookie set successfully");
 
       // Return success - will handle redirect client-side
       return {
@@ -64,7 +56,6 @@ export const useLogin = routeAction$(
       if (error && typeof error === "object" && "status" in error) {
         throw error;
       }
-      console.log("[Login] Error:", error);
       return fail(400, {
         message: error instanceof Error ? error.message : "Login failed",
       });
@@ -90,15 +81,22 @@ export default component$(() => {
   });
 
   return (
-    <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #f5f5f5;">
-      <div style="width: 100%; max-width: 400px; padding: 40px; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-        <h1 style="margin: 0 0 30px 0; text-align: center; font-size: 24px; color: #333;">
-          Login
-        </h1>
+    <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg-primary); position: relative; overflow: hidden;">
+      {/* Background decoration */}
+      <div style="position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle at 30% 50%, rgba(255, 68, 68, 0.15) 0%, transparent 50%);"></div>
+      <div style="position: absolute; bottom: -50%; right: -50%; width: 200%; height: 200%; background: radial-gradient(circle at 70% 50%, rgba(255, 136, 51, 0.15) 0%, transparent 50%);"></div>
+      
+      <div style="width: 100%; max-width: 440px; padding: 48px; background: var(--bg-secondary); border-radius: 16px; box-shadow: var(--shadow-lg); border: 1px solid var(--border-color); position: relative; z-index: 1;">
+        <div style="text-align: center; margin-bottom: 36px;">
+          <h1 style="margin: 0 0 8px 0; font-size: 32px; font-weight: 700; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+            Chronos
+          </h1>
+          <p style="margin: 0; color: var(--text-secondary); font-size: 15px;">Welcome back! Sign in to continue</p>
+        </div>
 
-        <Form action={loginAction} style="display: flex; flex-direction: column; gap: 20px;">
-          <div style="display: flex; flex-direction: column; gap: 6px;">
-            <label for="email" style="font-weight: 500; font-size: 14px; color: #333;">
+        <Form action={loginAction} style="display: flex; flex-direction: column; gap: 24px;">
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <label for="email" style="font-weight: 600; font-size: 14px; color: var(--text-primary);">
               Email
             </label>
             <input
@@ -106,18 +104,26 @@ export default component$(() => {
               id="email"
               name="email"
               required
-              style="padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; outline: none; transition: border-color 0.2s;"
+              style="padding: 14px 16px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 15px; background: var(--bg-tertiary); color: var(--text-primary); outline: none; transition: all 0.2s;"
+              onFocus$={(e) => {
+                (e.target as HTMLElement).style.borderColor = "var(--accent-primary)";
+                (e.target as HTMLElement).style.boxShadow = "0 0 0 3px rgba(255, 68, 68, 0.1)";
+              }}
+              onBlur$={(e) => {
+                (e.target as HTMLElement).style.borderColor = "var(--border-color)";
+                (e.target as HTMLElement).style.boxShadow = "none";
+              }}
               placeholder="you@example.com"
             />
             {loginAction.value?.fieldErrors?.email && (
-              <span style="color: #dc2626; font-size: 12px;">
+              <span style="color: var(--error); font-size: 13px; font-weight: 500;">
                 {loginAction.value.fieldErrors.email}
               </span>
             )}
           </div>
 
-          <div style="display: flex; flex-direction: column; gap: 6px;">
-            <label for="password" style="font-weight: 500; font-size: 14px; color: #333;">
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <label for="password" style="font-weight: 600; font-size: 14px; color: var(--text-primary);">
               Password
             </label>
             <input
@@ -125,11 +131,19 @@ export default component$(() => {
               id="password"
               name="password"
               required
-              style="padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; outline: none; transition: border-color 0.2s;"
+              style="padding: 14px 16px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 15px; background: var(--bg-tertiary); color: var(--text-primary); outline: none; transition: all 0.2s;"
+              onFocus$={(e) => {
+                (e.target as HTMLElement).style.borderColor = "var(--accent-primary)";
+                (e.target as HTMLElement).style.boxShadow = "0 0 0 3px rgba(255, 68, 68, 0.1)";
+              }}
+              onBlur$={(e) => {
+                (e.target as HTMLElement).style.borderColor = "var(--border-color)";
+                (e.target as HTMLElement).style.boxShadow = "none";
+              }}
               placeholder="Enter your password"
             />
             {loginAction.value?.fieldErrors?.password && (
-              <span style="color: #dc2626; font-size: 12px;">
+              <span style="color: var(--error); font-size: 13px; font-weight: 500;">
                 {loginAction.value.fieldErrors.password}
               </span>
             )}
@@ -137,7 +151,15 @@ export default component$(() => {
 
           <button
             type="submit"
-            style="padding: 12px 20px; background: #0070f3; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: 500; cursor: pointer; transition: background 0.2s;"
+            style="padding: 14px 24px; background: var(--accent-gradient); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow-sm); transition: all 0.3s; margin-top: 8px;"
+            onMouseOver$={(e) => {
+              (e.target as HTMLElement).style.transform = "translateY(-2px)";
+              (e.target as HTMLElement).style.boxShadow = "var(--shadow-accent)";
+            }}
+            onMouseOut$={(e) => {
+              (e.target as HTMLElement).style.transform = "translateY(0)";
+              (e.target as HTMLElement).style.boxShadow = "var(--shadow-sm)";
+            }}
             disabled={loginAction.isRunning}
           >
             {loginAction.isRunning ? "Signing in..." : "Sign In"}
@@ -145,14 +167,17 @@ export default component$(() => {
         </Form>
 
         {loginAction.value?.failed && (
-          <div style="margin-top: 20px; padding: 12px; background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; border-radius: 6px; text-align: center;">
+          <div style="margin-top: 24px; padding: 14px 18px; background: rgba(239, 68, 68, 0.1); border: 1px solid var(--error); color: var(--error); border-radius: 10px; text-align: center; font-weight: 500;">
             {loginAction.value.message}
           </div>
         )}
 
-        <div style="margin-top: 24px; text-align: center; font-size: 14px; color: #666;">
+        <div style="margin-top: 32px; text-align: center; font-size: 14px; color: var(--text-secondary);">
           Don't have an account?{" "}
-          <Link href="/signup" style="color: #0070f3; text-decoration: none; font-weight: 500;">
+          <Link href="/signup" style="color: var(--accent-secondary); text-decoration: none; font-weight: 600; transition: color 0.2s;"
+            onMouseOver$={(e) => (e.target as HTMLElement).style.color = "var(--accent-secondary-hover)"}
+            onMouseOut$={(e) => (e.target as HTMLElement).style.color = "var(--accent-secondary)"}
+          >
             Create an account
           </Link>
         </div>
