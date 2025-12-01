@@ -176,7 +176,7 @@ export default component$(() => {
                 </tr>
               </thead>
               <tbody>
-                {usersSignal.value.users.map((user, index) => (
+                {usersSignal.value.users.map((user) => (
                   <tr key={user.id} style="border-bottom: 1px solid var(--border-color); transition: background 0.2s;"
                     onMouseOver$={(e) => (e.currentTarget as HTMLElement).style.background = "var(--bg-elevated)"}
                     onMouseOut$={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}
