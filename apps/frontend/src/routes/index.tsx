@@ -6,8 +6,8 @@ export const useRedirect = routeLoader$(async ({ redirect, cookie }) => {
   const token = cookie.get("chronos_auth_token")?.value;
   
   if (token) {
-    // User is logged in, redirect to users page
-    throw redirect(302, "/users");
+    // User is logged in, redirect to home page
+    throw redirect(302, "/home");
   } else {
     // User is not logged in, redirect to login
     throw redirect(302, "/login");
