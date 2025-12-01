@@ -1,7 +1,53 @@
 import { component$ } from "@builder.io/qwik";
 import { routeLoader$, routeAction$, Form, zod$, z } from "@builder.io/qwik-city";
 import type { DocumentHead } from "@builder.io/qwik-city";
+import type { AuthUser } from "@chronos/types/auth";
 import { userService } from "~/services/user.service";
+import { getApiBaseUrl } from "~/config/env";
+
+// Auth check - runs first
+export const useAuthCheck = routeLoader$(async ({ redirect, cookie }) => {
+  console.log("[Auth] Checking authentication...");
+  
+  const token = cookie.get("chronos_auth_token")?.value;
+  console.log("[Auth] Token present:", !!token);
+
+  if (!token) {
+    console.log("[Auth] No token, redirecting to login");
+    throw redirect(302, "/login");
+  }
+
+  try {
+    const apiUrl = getApiBaseUrl();
+    const response = await fetch(`${apiUrl}/api/auth/me`, {
+      headers: {
+        "Authorization": `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      console.log("[Auth] Invalid token, redirecting to login");
+      cookie.delete("chronos_auth_token");
+      throw redirect(302, "/login");
+    }
+
+    const data = await response.json();
+    if (!data.success) {
+      cookie.delete("chronos_auth_token");
+      throw redirect(302, "/login");
+    }
+
+    console.log("[Auth] Authenticated as:", data.data?.email);
+    return { user: data.data as AuthUser };
+  } catch (error) {
+    if (error && typeof error === "object" && "status" in error) {
+      throw error;
+    }
+    console.log("[Auth] Error:", error);
+    cookie.delete("chronos_auth_token");
+    throw redirect(302, "/login");
+  }
+});
 
 export const useUsers = routeLoader$(async () => {
   try {
@@ -40,11 +86,25 @@ export const useCreateUser = routeAction$(
 );
 
 export default component$(() => {
+  const authData = useAuthCheck();
   const usersSignal = useUsers();
   const createUserAction = useCreateUser();
 
   return (
-    <>
+    <div>
+      {/* Header */}
+      <header style="background: #fff; border-bottom: 1px solid #eee; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; margin: -24px -24px 24px -24px;">
+        <div style="font-weight: 600; font-size: 18px;">Chronos</div>
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <span style="color: #666; font-size: 14px;">
+            {authData.value.user?.email}
+          </span>
+          <a href="/logout" style="color: #dc2626; text-decoration: none; font-size: 14px;">
+            Logout
+          </a>
+        </div>
+      </header>
+
       <h1>Users</h1>
 
       {/* Create User Form */}
@@ -166,7 +226,7 @@ export default component$(() => {
           </table>
         </div>
       )}
-    </>
+    </div>
   );
 });
 

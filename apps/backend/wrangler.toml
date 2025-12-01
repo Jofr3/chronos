@@ -2,18 +2,27 @@ name = "chronos-backend"
 main = "src/index.ts"
 compatibility_date = "2025-11-24"
 
+[vars]
+JWT_SECRET = "dev-secret-change-in-production"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "chronos-database"
 database_id = "c2ac623f-5a57-4c1e-9d01-731a4ab8f97f"
 
 [env.development]
+[env.development.vars]
+JWT_SECRET = "dev-secret-change-in-production"
+
 [[env.development.d1_databases]]
 binding = "DB"
 database_name = "chronos-database-development"
 database_id = "046daf02-adb5-400c-9737-afbf90d03d59"
 
 [env.preview]
+[env.preview.vars]
+JWT_SECRET = "preview-secret-change-in-production"
+
 [[env.preview.d1_databases]]
 binding = "DB"
 database_name = "chronos-database-preview"

@@ -5,7 +5,8 @@
     ".": "./src/index.ts",
     "./user": "./src/user.ts",
     "./api": "./src/api.ts",
-    "./database": "./src/database.ts"
+    "./database": "./src/database.ts",
+    "./auth": "./src/auth.ts"
   },
   "devDependencies": {
     "typescript": "^5"
