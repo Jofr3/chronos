@@ -13,7 +13,7 @@ interface ApiErrorResponse {
 }
 
 export const useLogin = routeAction$(
-  async (data, { fail, cookie, redirect }) => {
+  async (data, { fail, cookie }) => {
     try {
       const apiUrl = getApiBaseUrl();
       console.log("[Login] Attempting login to:", `${apiUrl}/api/auth/login`);
@@ -81,6 +81,7 @@ export default component$(() => {
   const nav = useNavigate();
 
   // Handle client-side redirect after successful login
+  // eslint-disable-next-line qwik/no-use-visible-task
   useVisibleTask$(({ track }) => {
     const value = track(() => loginAction.value);
     if (value?.success && value?.redirectTo) {

@@ -13,7 +13,7 @@ interface ApiErrorResponse {
 }
 
 export const useSignup = routeAction$(
-  async (data, { fail, cookie, redirect }) => {
+  async (data, { fail, cookie }) => {
     try {
       // Validate passwords match
       if (data.password !== data.confirmPassword) {
@@ -84,6 +84,7 @@ export default component$(() => {
   const nav = useNavigate();
 
   // Handle client-side redirect after successful signup
+  // eslint-disable-next-line qwik/no-use-visible-task
   useVisibleTask$(({ track }) => {
     const value = track(() => signupAction.value);
     if (value?.success && value?.redirectTo) {
