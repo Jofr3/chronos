@@ -7,6 +7,7 @@ interface UserRow {
   username: string;
   first_name: string | null;
   last_name: string | null;
+  role: "user" | "developer";
   password_hash: string | null;
   created_at: string;
   updated_at: string | null;
@@ -21,7 +22,7 @@ export async function getUserByEmailWithPassword(
   email: string
 ): Promise<UserWithPassword | null> {
   const stmt = db.prepare(
-    "SELECT id, email, username, first_name, last_name, password_hash, created_at, updated_at, deleted_at FROM users WHERE email = ?"
+    "SELECT id, email, username, first_name, last_name, role, password_hash, created_at, updated_at, deleted_at FROM users WHERE email = ?"
   ).bind(email);
   
   const user = await stmt.first<UserRow>();
@@ -44,16 +45,18 @@ export async function createUserWithPassword(
     passwordHash: string;
     firstName?: string;
     lastName?: string;
+    role?: "user" | "developer";
   }
 ): Promise<UserWithPassword> {
   const stmt = db.prepare(
-    "INSERT INTO users (email, username, password_hash, first_name, last_name) VALUES (?, ?, ?, ?, ?)"
+    "INSERT INTO users (email, username, password_hash, first_name, last_name, role) VALUES (?, ?, ?, ?, ?, ?)"
   ).bind(
     data.email,
     data.username,
     data.passwordHash,
     data.firstName || null,
-    data.lastName || null
+    data.lastName || null,
+    data.role || "user"
   );
 
   const result = await stmt.run();
@@ -84,7 +87,7 @@ export async function userExistsByEmail(db: D1, email: string): Promise<boolean>
  */
 export async function getUserById(db: D1, id: string): Promise<UserWithPassword | null> {
   const stmt = db.prepare(
-    "SELECT id, email, username, first_name, last_name, password_hash, created_at, updated_at, deleted_at FROM users WHERE id = ?"
+    "SELECT id, email, username, first_name, last_name, role, password_hash, created_at, updated_at, deleted_at FROM users WHERE id = ?"
   ).bind(id);
 
   const user = await stmt.first<UserRow>();
@@ -106,6 +109,7 @@ function mapRowToUserWithPassword(row: UserRow): UserWithPassword {
     username: row.username,
     first_name: row.first_name || "",
     last_name: row.last_name || "",
+    role: row.role || "user",
     password_hash: row.password_hash,
     created_at: new Date(row.created_at),
     updated_at: row.updated_at ? new Date(row.updated_at) : null,

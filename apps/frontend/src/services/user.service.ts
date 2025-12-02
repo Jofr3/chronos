@@ -56,16 +56,48 @@ class UserService {
 
   /**
    * Create a new user
-   * @param userData - User data (email, username, and optional first_name/last_name)
+   * @param userData - User data (email, username, and optional first_name/last_name/role)
    * @returns Promise with created user
    */
   async createUser(userData: { 
     email: string; 
     username: string; 
     first_name?: string; 
-    last_name?: string 
+    last_name?: string;
+    role?: "user" | "developer";
   }): Promise<User> {
     const response = await fetch(`${this.baseUrl}/api/users`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(userData),
+    });
+
+    const data: ApiResponse<User> | ApiErrorResponse = await response.json();
+
+    if (!response.ok || !data.success) {
+      const errorData = data as ApiErrorResponse;
+      throw new Error(errorData.error?.message || errorData.message || "Failed to create user");
+    }
+
+    return (data as ApiResponse<User>).data;
+  }
+
+  /**
+   * Create a new user with password
+   * @param userData - User data including password
+   * @returns Promise with created user
+   */
+  async createUserWithPassword(userData: {
+    email: string;
+    username: string;
+    password: string;
+    first_name?: string;
+    last_name?: string;
+    role?: "user" | "developer";
+  }): Promise<User> {
+    const response = await fetch(`${this.baseUrl}/api/users/with-password`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -91,7 +123,7 @@ class UserService {
    */
   async updateUser(
     id: string,
-    userData: Partial<{ email: string; username: string; first_name: string; last_name: string }>
+    userData: Partial<{ email: string; username: string; first_name: string; last_name: string; role: "user" | "developer" }>
   ): Promise<User | null> {
     const response = await fetch(`${this.baseUrl}/api/users/${id}`, {
       method: "PUT",

@@ -25,7 +25,8 @@ export class UserService {
     email: string; 
     username: string; 
     first_name?: string; 
-    last_name?: string 
+    last_name?: string;
+    role?: "user" | "developer";
   }): Promise<User> {
     if (!this.isValidEmail(data.email)) {
       throw new Error("Invalid email format");
@@ -46,7 +47,7 @@ export class UserService {
 
   async updateUser(
     id: string, 
-    data: Partial<{ email: string; username: string; first_name: string; last_name: string }>
+    data: Partial<{ email: string; username: string; first_name: string; last_name: string; role: "user" | "developer" }>
   ): Promise<User | null> {
     if (data.email && !this.isValidEmail(data.email)) {
       throw new Error("Invalid email format");

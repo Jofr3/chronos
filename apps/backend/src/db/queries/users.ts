@@ -63,11 +63,11 @@ export async function getUserByUsername(db: D1, username: string): Promise<User 
  */
 export async function createUser(
   db: D1,
-  data: { email: string; username: string; first_name?: string; last_name?: string }
+  data: { email: string; username: string; first_name?: string; last_name?: string; role?: "user" | "developer" }
 ): Promise<User> {
   const stmt = db.prepare(
-    "INSERT INTO users (email, username, first_name, last_name) VALUES (?, ?, ?, ?)"
-  ).bind(data.email, data.username, data.first_name || null, data.last_name || null);
+    "INSERT INTO users (email, username, first_name, last_name, role) VALUES (?, ?, ?, ?, ?)"
+  ).bind(data.email, data.username, data.first_name || null, data.last_name || null, data.role || "user");
 
   const result = await stmt.run();
 
@@ -90,7 +90,7 @@ export async function createUser(
 export async function updateUser(
   db: D1,
   id: string,
-  data: Partial<{ email: string; username: string; first_name: string; last_name: string }>
+  data: Partial<{ email: string; username: string; first_name: string; last_name: string; role: "user" | "developer" }>
 ): Promise<User | null> {
   const existingUser = await getUserById(db, id);
   if (!existingUser) {
@@ -119,6 +119,11 @@ export async function updateUser(
   if (data.last_name !== undefined) {
     updates.push("last_name = ?");
     values.push(data.last_name);
+  }
+
+  if (data.role !== undefined) {
+    updates.push("role = ?");
+    values.push(data.role);
   }
 
   if (updates.length === 0) {
@@ -166,6 +171,7 @@ function mapUserToUser(row: User): User {
     username: row.username,
     first_name: row.first_name || "",
     last_name: row.last_name || "",
+    role: row.role || "user",
     created_at: new Date(row.created_at),
     updated_at: row.updated_at ? new Date(row.updated_at) : null,
     deleted_at: row.deleted_at ? new Date(row.deleted_at) : null,

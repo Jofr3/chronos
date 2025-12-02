@@ -3,7 +3,7 @@ import { routeLoader$, Link } from "@builder.io/qwik-city";
 import type { AuthUser } from "@chronos/types/auth";
 import { getApiBaseUrl } from "~/config/env";
 
-// Auth check for all pages in this layout
+// Auth check for developer pages - requires developer role
 export const useAuthCheck = routeLoader$(async ({ redirect, cookie }) => {
   const token = cookie.get("chronos_auth_token")?.value;
 
@@ -30,7 +30,14 @@ export const useAuthCheck = routeLoader$(async ({ redirect, cookie }) => {
       throw redirect(302, "/login");
     }
 
-    return { user: data.data as AuthUser };
+    const user = data.data as AuthUser;
+
+    // Check if user has developer role
+    if (user.role !== "developer") {
+      throw redirect(302, "/tasks");
+    }
+
+    return { user };
   } catch (error) {
     if (error && typeof error === "object" && "status" in error) {
       throw error;
@@ -62,7 +69,7 @@ export default component$(() => {
           <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px;">
             <li>
               <Link 
-                href="/tasks" 
+                href="/admin/users" 
                 style="display: flex; align-items: center; padding: 14px 16px; border-radius: 8px; text-decoration: none; color: var(--text-primary); font-weight: 500; transition: all 0.2s; border: 1px solid transparent;"
                 onMouseOver$={(e) => {
                   (e.target as HTMLElement).style.background = "var(--bg-elevated)";
@@ -73,7 +80,7 @@ export default component$(() => {
                   (e.target as HTMLElement).style.borderColor = "transparent";
                 }}
               >
-                Tasks
+                Users
               </Link>
             </li>
           </ul>
@@ -81,8 +88,11 @@ export default component$(() => {
 
         {/* User info at bottom */}
         <div style="padding: 20px; border-top: 1px solid var(--border-color); flex-shrink: 0; background: var(--bg-tertiary);">
-          <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
             {authData.value.user?.email}
+          </div>
+          <div style="font-size: 11px; color: var(--text-tertiary); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
+            Developer
           </div>
           <a 
             href="/logout" 

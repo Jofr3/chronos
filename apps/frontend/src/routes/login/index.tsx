@@ -49,7 +49,7 @@ export const useLogin = routeAction$(
       // Return success - will handle redirect client-side
       return {
         success: true,
-        redirectTo: "/home",
+        redirectTo: "/tasks",
       };
     } catch (error) {
       // Check if it's a redirect (don't catch those)

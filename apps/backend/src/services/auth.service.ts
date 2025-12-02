@@ -80,6 +80,7 @@ export class AuthService {
       username: user.username,
       firstName: user.first_name,
       lastName: user.last_name,
+      role: user.role,
     };
   }
 
@@ -246,6 +247,7 @@ export class AuthService {
       username: user.username,
       firstName: user.first_name,
       lastName: user.last_name,
+      role: user.role,
     };
 
     const token = await this.generateToken(authUser);
@@ -289,6 +291,7 @@ export class AuthService {
       username: user.username,
       firstName: user.first_name,
       lastName: user.last_name,
+      role: user.role,
     };
 
     const token = await this.generateToken(authUser);
