@@ -11,6 +11,8 @@ export const useAuthCheck = routeLoader$(async ({ redirect, cookie }) => {
     throw redirect(302, "/login");
   }
 
+  let user: AuthUser;
+  
   try {
     const apiUrl = getApiBaseUrl();
     const response = await fetch(`${apiUrl}/api/auth/me`, {
@@ -30,21 +32,27 @@ export const useAuthCheck = routeLoader$(async ({ redirect, cookie }) => {
       throw redirect(302, "/login");
     }
 
-    const user = data.data as AuthUser;
-
-    // Check if user has developer role
-    if (user.role !== "developer") {
-      throw redirect(302, "/tasks");
-    }
-
-    return { user };
+    user = data.data as AuthUser;
   } catch (error) {
+    // Re-throw redirects (they have a status property)
     if (error && typeof error === "object" && "status" in error) {
       throw error;
     }
+    // For other errors, delete cookie and redirect to login
     cookie.delete("chronos_auth_token");
     throw redirect(302, "/login");
   }
+
+  // Check if user has developer role - redirect to tasks if not
+  // Default to 'user' if role is undefined (for users created before migration)
+  const userRole = user.role || "user";
+  
+  if (userRole !== "developer") {
+    // Don't delete the cookie - user is authenticated, just not a developer
+    throw redirect(302, "/tasks");
+  }
+
+  return { user };
 });
 
 export default component$(() => {
