@@ -1,5 +1,5 @@
 import type { D1 } from "@chronos/types/database";
-import type { Task, TaskList, TaskListWithTasks } from "@chronos/types";
+import type { Task, TaskList, TaskListWithTasks, DayOfWeek } from "@chronos/types";
 import * as taskQueries from "../db/queries/tasks";
 
 export class TaskService {
@@ -59,7 +59,17 @@ export class TaskService {
     return taskQueries.createTask(this.db, taskId, listId, title);
   }
 
-  async updateTask(taskId: string, userId: string, updates: { title?: string; completed?: boolean }): Promise<Task | null> {
+  async updateTask(
+    taskId: string, 
+    userId: string, 
+    updates: { 
+      title?: string; 
+      completed?: boolean;
+      due_date?: string | null;
+      is_recurring?: boolean;
+      recurring_days?: DayOfWeek[] | null;
+    }
+  ): Promise<Task | null> {
     // Get the task to verify ownership
     const task = await taskQueries.getTaskById(this.db, taskId);
     if (!task) return null;

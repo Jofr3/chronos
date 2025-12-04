@@ -1,5 +1,5 @@
 import type { D1 } from "@chronos/types/database";
-import type { Task, TaskList } from "@chronos/types";
+import type { Task, TaskList, DayOfWeek } from "@chronos/types";
 
 // Database row types (snake_case from DB)
 interface TaskListRow {
@@ -15,8 +15,36 @@ interface TaskRow {
   list_id: string;
   title: string;
   completed: number;
+  due_date: string | null;
+  is_recurring: number;
+  recurring_days: string | null;
   created_at: string;
   updated_at: string;
+}
+
+// Helper to parse recurring_days JSON string to DayOfWeek array
+function parseRecurringDays(jsonString: string | null): DayOfWeek[] | null {
+  if (!jsonString) return null;
+  try {
+    return JSON.parse(jsonString) as DayOfWeek[];
+  } catch {
+    return null;
+  }
+}
+
+// Helper to convert Task row to Task object
+function rowToTask(row: TaskRow): Task {
+  return {
+    id: row.id,
+    list_id: row.list_id,
+    title: row.title,
+    completed: row.completed === 1,
+    due_date: row.due_date,
+    is_recurring: row.is_recurring === 1,
+    recurring_days: parseRecurringDays(row.recurring_days),
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
 }
 
 // Task List queries
@@ -106,14 +134,7 @@ export async function getTasksByListId(db: D1, listId: string): Promise<Task[]> 
     throw new Error(result.error || "Failed to fetch tasks");
   }
 
-  return result.results.map(row => ({
-    id: row.id,
-    list_id: row.list_id,
-    title: row.title,
-    completed: row.completed === 1,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-  }));
+  return result.results.map(rowToTask);
 }
 
 export async function getTaskById(db: D1, taskId: string): Promise<Task | null> {
@@ -122,20 +143,13 @@ export async function getTaskById(db: D1, taskId: string): Promise<Task | null> 
 
   if (!row) return null;
 
-  return {
-    id: row.id,
-    list_id: row.list_id,
-    title: row.title,
-    completed: row.completed === 1,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-  };
+  return rowToTask(row);
 }
 
 export async function createTask(db: D1, taskId: string, listId: string, title: string): Promise<Task> {
   const now = new Date().toISOString();
   
-  const stmt = db.prepare("INSERT INTO tasks (id, list_id, title, completed, created_at, updated_at) VALUES (?, ?, ?, 0, ?, ?)");
+  const stmt = db.prepare("INSERT INTO tasks (id, list_id, title, completed, is_recurring, created_at, updated_at) VALUES (?, ?, ?, 0, 0, ?, ?)");
   const result = await stmt.bind(taskId, listId, title, now, now).run();
 
   if (!result.success) {
@@ -147,15 +161,28 @@ export async function createTask(db: D1, taskId: string, listId: string, title: 
     list_id: listId,
     title,
     completed: false,
+    due_date: null,
+    is_recurring: false,
+    recurring_days: null,
     created_at: now,
     updated_at: now,
   };
 }
 
-export async function updateTask(db: D1, taskId: string, updates: { title?: string; completed?: boolean }): Promise<Task | null> {
+export async function updateTask(
+  db: D1, 
+  taskId: string, 
+  updates: { 
+    title?: string; 
+    completed?: boolean;
+    due_date?: string | null;
+    is_recurring?: boolean;
+    recurring_days?: DayOfWeek[] | null;
+  }
+): Promise<Task | null> {
   const now = new Date().toISOString();
   const setParts: string[] = ["updated_at = ?"];
-  const values: any[] = [now];
+  const values: (string | number | null)[] = [now];
 
   if (updates.title !== undefined) {
     setParts.push("title = ?");
@@ -165,6 +192,21 @@ export async function updateTask(db: D1, taskId: string, updates: { title?: stri
   if (updates.completed !== undefined) {
     setParts.push("completed = ?");
     values.push(updates.completed ? 1 : 0);
+  }
+
+  if (updates.due_date !== undefined) {
+    setParts.push("due_date = ?");
+    values.push(updates.due_date);
+  }
+
+  if (updates.is_recurring !== undefined) {
+    setParts.push("is_recurring = ?");
+    values.push(updates.is_recurring ? 1 : 0);
+  }
+
+  if (updates.recurring_days !== undefined) {
+    setParts.push("recurring_days = ?");
+    values.push(updates.recurring_days ? JSON.stringify(updates.recurring_days) : null);
   }
 
   values.push(taskId);
