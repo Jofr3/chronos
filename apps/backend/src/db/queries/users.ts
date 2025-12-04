@@ -1,94 +1,82 @@
-import type { D1 } from "@chronos/types/database";
+import { eq, desc } from "drizzle-orm";
+import type { DrizzleClient } from "../client";
+import { users } from "../schema";
 import type { User } from "@chronos/types/user";
 
 /**
  * Get all users from the database
  */
-
-export async function getAllUsers(db: D1): Promise<User[]> {
-  const stmt = db.prepare("SELECT * FROM users ORDER BY created_at DESC");
-  const result = await stmt.all<User>();
-
-  if (!result.success) {
-    throw new Error(result.error || "Failed to fetch users");
-  }
-
-  return result.results.map(mapUserToUser);
+export async function getAllUsers(db: DrizzleClient): Promise<User[]> {
+  const result = await db.select().from(users).orderBy(desc(users.created_at));
+  return result.map(mapUserToUser);
 }
 
 /**
  * Get a user by ID
  */
-export async function getUserById(db: D1, id: string): Promise<User | null> {
-  const stmt = db.prepare("SELECT * FROM users WHERE id = ?").bind(id);
-  const user = await stmt.first<User>();
+export async function getUserById(db: DrizzleClient, id: string): Promise<User | null> {
+  const result = await db.select().from(users).where(eq(users.id, parseInt(id))).limit(1);
 
-  if (!user) {
+  if (result.length === 0) {
     return null;
   }
 
-  return mapUserToUser(user);
+  return mapUserToUser(result[0]);
 }
 
 /**
  * Get a user by email
  */
-export async function getUserByEmail(db: D1, email: string): Promise<User | null> {
-  const stmt = db.prepare("SELECT * FROM users WHERE email = ?").bind(email);
-  const user = await stmt.first<User>();
+export async function getUserByEmail(db: DrizzleClient, email: string): Promise<User | null> {
+  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
 
-  if (!user) {
+  if (result.length === 0) {
     return null;
   }
 
-  return mapUserToUser(user);
+  return mapUserToUser(result[0]);
 }
 
 /**
  * Get a user by username
  */
-export async function getUserByUsername(db: D1, username: string): Promise<User | null> {
-  const stmt = db.prepare("SELECT * FROM users WHERE username = ?").bind(username);
-  const user = await stmt.first<User>();
+export async function getUserByUsername(db: DrizzleClient, username: string): Promise<User | null> {
+  const result = await db.select().from(users).where(eq(users.username, username)).limit(1);
 
-  if (!user) {
+  if (result.length === 0) {
     return null;
   }
 
-  return mapUserToUser(user);
+  return mapUserToUser(result[0]);
 }
 
 /**
  * Create a new user
  */
 export async function createUser(
-  db: D1,
+  db: DrizzleClient,
   data: { email: string; username: string; first_name?: string; last_name?: string; role?: "user" | "developer" }
 ): Promise<User> {
-  const stmt = db.prepare(
-    "INSERT INTO users (email, username, first_name, last_name, role) VALUES (?, ?, ?, ?, ?)"
-  ).bind(data.email, data.username, data.first_name || null, data.last_name || null, data.role || "user");
+  const result = await db.insert(users).values({
+    email: data.email,
+    username: data.username,
+    first_name: data.first_name || null,
+    last_name: data.last_name || null,
+    role: data.role || "user",
+  }).returning();
 
-  const result = await stmt.run();
-
-  if (!result.success) {
-    throw new Error(result.error || "Failed to create user");
+  if (!result || result.length === 0) {
+    throw new Error("Failed to create user");
   }
 
-  // Fetch the created user to get the auto-generated ID
-  const createdUser = await getUserByEmail(db, data.email);
-  if (!createdUser) {
-    throw new Error("Failed to retrieve created user");
-  }
-
-  return createdUser;
+  return mapUserToUser(result[0]);
 }
 
 /**
  * Update a user
  */
 export async function updateUser(
-  db: D1,
+  db: DrizzleClient,
   id: string,
   data: Partial<{ email: string; username: string; first_name: string; last_name: string; role: "user" | "developer" }>
 ): Promise<User | null> {
@@ -98,73 +86,41 @@ export async function updateUser(
   }
 
   const now = new Date().toISOString();
-  const updates: string[] = [];
-  const values: unknown[] = [];
+  const updateData: Record<string, string | null> = {
+    updated_at: now,
+  };
 
-  if (data.email !== undefined) {
-    updates.push("email = ?");
-    values.push(data.email);
+  if (data.email !== undefined) updateData.email = data.email;
+  if (data.username !== undefined) updateData.username = data.username;
+  if (data.first_name !== undefined) updateData.first_name = data.first_name;
+  if (data.last_name !== undefined) updateData.last_name = data.last_name;
+  if (data.role !== undefined) updateData.role = data.role;
+
+  const result = await db
+    .update(users)
+    .set(updateData)
+    .where(eq(users.id, parseInt(id)))
+    .returning();
+
+  if (!result || result.length === 0) {
+    return null;
   }
 
-  if (data.username !== undefined) {
-    updates.push("username = ?");
-    values.push(data.username);
-  }
-
-  if (data.first_name !== undefined) {
-    updates.push("first_name = ?");
-    values.push(data.first_name);
-  }
-
-  if (data.last_name !== undefined) {
-    updates.push("last_name = ?");
-    values.push(data.last_name);
-  }
-
-  if (data.role !== undefined) {
-    updates.push("role = ?");
-    values.push(data.role);
-  }
-
-  if (updates.length === 0) {
-    return existingUser;
-  }
-
-  updates.push("updated_at = ?");
-  values.push(now);
-  values.push(id);
-
-  const stmt = db.prepare(
-    `UPDATE users SET ${updates.join(", ")} WHERE id = ?`
-  ).bind(...values);
-
-  const result = await stmt.run();
-
-  if (!result.success) {
-    throw new Error(result.error || "Failed to update user");
-  }
-
-  return getUserById(db, id);
+  return mapUserToUser(result[0]);
 }
 
 /**
  * Delete a user
  */
-export async function deleteUser(db: D1, id: string): Promise<boolean> {
-  const stmt = db.prepare("DELETE FROM users WHERE id = ?").bind(id);
-  const result = await stmt.run();
-
-  if (!result.success) {
-    throw new Error(result.error || "Failed to delete user");
-  }
-
-  return result.meta.rows_written > 0;
+export async function deleteUser(db: DrizzleClient, id: string): Promise<boolean> {
+  const result = await db.delete(users).where(eq(users.id, parseInt(id))).returning();
+  return result.length > 0;
 }
 
 /**
  * Helper function to map database row to User type
  */
-function mapUserToUser(row: User): User {
+function mapUserToUser(row: typeof users.$inferSelect): User {
   return {
     id: row.id.toString(),
     email: row.email,

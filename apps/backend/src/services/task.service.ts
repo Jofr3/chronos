@@ -1,9 +1,9 @@
-import type { D1 } from "@chronos/types/database";
+import type { DrizzleClient } from "../db/client";
 import type { Task, TaskList, TaskListWithTasks, DayOfWeek } from "@chronos/types";
 import * as taskQueries from "../db/queries/tasks";
 
 export class TaskService {
-  constructor(private db: D1) {}
+  constructor(private db: DrizzleClient) {}
 
   // Task List methods
   async getAllTaskListsWithTasks(userId: string): Promise<TaskListWithTasks[]> {

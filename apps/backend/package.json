@@ -6,17 +6,19 @@
     "dev:remote": "bunx wrangler dev --env development",
     "pre:remote": "bunx wrangler dev --env preview",
     "prod:remote": "bunx wrangler dev",
-
     "build": "bun build src/index.ts --outfile=dist/index.js --target=bun",
-
-    "migrate:local":"bunx wrangler d1 execute DB --local",
-    "migrate:dev":"bunx wrangler d1 execute DB --remote --env development",
-    "migrate:pre":"bunx wrangler d1 execute DB --remote --env preview",
-    "migrate:prod":"bunx wrangler d1 execute DB --remote"
+    "migrate:local": "bunx wrangler d1 execute DB --local",
+    "migrate:dev": "bunx wrangler d1 execute DB --remote --env development",
+    "migrate:pre": "bunx wrangler d1 execute DB --remote --env preview",
+    "migrate:prod": "bunx wrangler d1 execute DB --remote"
   },
   "dependencies": {
     "@chronos/types": "workspace:*",
+    "drizzle-orm": "^0.45.0",
     "hono": "^4.10.6",
     "wrangler": "^4.50.0"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.8"
   }
 }

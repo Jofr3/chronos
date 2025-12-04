@@ -1,10 +1,10 @@
-import type { D1 } from "@chronos/types/database";
+import type { DrizzleClient } from "../db/client";
 import type { AuthResponse, SignupRequest, AuthUser, JwtPayload } from "@chronos/types/auth";
 import * as authQueries from "../db/queries/auth";
 
 export class AuthService {
   constructor(
-    private db: D1,
+    private db: DrizzleClient,
     private jwtSecret: string
   ) {}
 

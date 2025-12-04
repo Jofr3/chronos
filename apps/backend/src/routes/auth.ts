@@ -3,6 +3,7 @@ import type { Env } from "../types/env";
 import type { ApiResponse, ApiError } from "@chronos/types/api";
 import type { AuthResponse, LoginRequest, SignupRequest, AuthUser } from "@chronos/types/auth";
 import { AuthService } from "../services/auth.service";
+import { createDrizzleClient } from "../db/client";
 
 const auth = new Hono<{ Bindings: Env }>();
 
@@ -43,7 +44,8 @@ auth.post("/signup", async (c) => {
       return c.json(errorResponse, 400);
     }
 
-    const authService = new AuthService(c.env.DB, c.env.JWT_SECRET);
+    const db = createDrizzleClient(c.env.DB);
+    const authService = new AuthService(db, c.env.JWT_SECRET);
     const result = await authService.signup({
       email,
       password,
@@ -113,7 +115,8 @@ auth.post("/login", async (c) => {
       return c.json(errorResponse, 400);
     }
 
-    const authService = new AuthService(c.env.DB, c.env.JWT_SECRET);
+    const db = createDrizzleClient(c.env.DB);
+    const authService = new AuthService(db, c.env.JWT_SECRET);
     const result = await authService.login(email, password);
 
     const response: ApiResponse<AuthResponse> = {
@@ -172,7 +175,8 @@ auth.get("/me", async (c) => {
       return c.json(errorResponse, 401);
     }
 
-    const authService = new AuthService(c.env.DB, c.env.JWT_SECRET);
+    const db = createDrizzleClient(c.env.DB);
+    const authService = new AuthService(db, c.env.JWT_SECRET);
     const payload = await authService.verifyToken(token);
 
     if (!payload) {

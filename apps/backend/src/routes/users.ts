@@ -3,6 +3,7 @@ import type { Env } from "../types/env";
 import type { ApiResponse, ApiError } from "@chronos/types/api";
 import type { User } from "@chronos/types/user";
 import { UserService } from "../services/user.service";
+import { createDrizzleClient } from "../db/client";
 import * as authQueries from "../db/queries/auth";
 
 const users = new Hono<{ Bindings: Env }>();
@@ -48,7 +49,8 @@ async function hashPassword(password: string): Promise<string> {
 
 users.get("/", async (c) => {
   try {
-    const userService = new UserService(c.env.DB);
+    const db = createDrizzleClient(c.env.DB);
+    const userService = new UserService(db);
     const allUsers = await userService.getAllUsers();
 
     const response: ApiResponse<User[]> = {
@@ -76,7 +78,8 @@ users.get("/", async (c) => {
 users.get("/:id", async (c) => {
   try {
     const id = c.req.param("id");
-    const userService = new UserService(c.env.DB);
+    const db = createDrizzleClient(c.env.DB);
+    const userService = new UserService(db);
     const user = await userService.getUserById(id);
 
     if (!user) {
@@ -138,7 +141,8 @@ users.post("/", async (c) => {
       return c.json(errorResponse, 400);
     }
 
-    const userService = new UserService(c.env.DB);
+    const db = createDrizzleClient(c.env.DB);
+    const userService = new UserService(db);
     const user = await userService.createUser({ email, username, first_name, last_name, role });
 
     const response: ApiResponse<User> = {
@@ -170,7 +174,8 @@ users.put("/:id", async (c) => {
     const body = await c.req.json();
     const { email, username, first_name, last_name, role } = body;
 
-    const userService = new UserService(c.env.DB);
+    const db = createDrizzleClient(c.env.DB);
+    const userService = new UserService(db);
     const user = await userService.updateUser(id, { email, username, first_name, last_name, role });
 
     if (!user) {
@@ -251,7 +256,8 @@ users.post("/with-password", async (c) => {
     const passwordHash = await hashPassword(password);
 
     // Create user with password
-    const createdUser = await authQueries.createUserWithPassword(c.env.DB, {
+    const db = createDrizzleClient(c.env.DB);
+    const createdUser = await authQueries.createUserWithPassword(db, {
       email,
       username,
       passwordHash,
@@ -299,7 +305,8 @@ users.post("/with-password", async (c) => {
 users.delete("/:id", async (c) => {
   try {
     const id = c.req.param("id");
-    const userService = new UserService(c.env.DB);
+    const db = createDrizzleClient(c.env.DB);
+    const userService = new UserService(db);
     const deleted = await userService.deleteUser(id);
 
     if (!deleted) {

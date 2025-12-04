@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { Env } from "../types/env";
 import { TaskService } from "../services/task.service";
+import { createDrizzleClient } from "../db/client";
 import type { CreateTaskListRequest, CreateTaskRequest, UpdateTaskRequest, UpdateTaskListRequest } from "@chronos/types";
 
 const tasks = new Hono<{ Bindings: Env }>();
@@ -66,7 +67,8 @@ tasks.get("/lists", async (c) => {
       return c.json({ success: false, error: { message: "Unauthorized" } }, 401);
     }
     
-    const taskService = new TaskService(c.env.DB);
+    const db = createDrizzleClient(c.env.DB);
+    const taskService = new TaskService(db);
     const lists = await taskService.getAllTaskListsWithTasks(userId);
     
     return c.json({ success: true, data: lists });
@@ -91,7 +93,8 @@ tasks.get("/lists/:listId", async (c) => {
     }
     
     const listId = c.req.param("listId");
-    const taskService = new TaskService(c.env.DB);
+    const db = createDrizzleClient(c.env.DB);
+    const taskService = new TaskService(db);
     const list = await taskService.getTaskList(listId, userId);
     
     if (!list) {
@@ -125,7 +128,8 @@ tasks.post("/lists", async (c) => {
       return c.json({ success: false, error: { message: "List name is required" } }, 400);
     }
     
-    const taskService = new TaskService(c.env.DB);
+    const db = createDrizzleClient(c.env.DB);
+    const taskService = new TaskService(db);
     const list = await taskService.createTaskList(userId, body.name);
     
     return c.json({ success: true, data: list }, 201);
@@ -156,7 +160,8 @@ tasks.put("/lists/:listId", async (c) => {
       return c.json({ success: false, error: { message: "List name is required" } }, 400);
     }
     
-    const taskService = new TaskService(c.env.DB);
+    const db = createDrizzleClient(c.env.DB);
+    const taskService = new TaskService(db);
     const list = await taskService.updateTaskList(listId, userId, body.name);
     
     if (!list) {
@@ -185,7 +190,8 @@ tasks.delete("/lists/:listId", async (c) => {
     }
     
     const listId = c.req.param("listId");
-    const taskService = new TaskService(c.env.DB);
+    const db = createDrizzleClient(c.env.DB);
+    const taskService = new TaskService(db);
     const deleted = await taskService.deleteTaskList(listId, userId);
     
     if (!deleted) {
@@ -220,7 +226,8 @@ tasks.post("/lists/:listId/tasks", async (c) => {
       return c.json({ success: false, error: { message: "Task title is required" } }, 400);
     }
     
-    const taskService = new TaskService(c.env.DB);
+    const db = createDrizzleClient(c.env.DB);
+    const taskService = new TaskService(db);
     const task = await taskService.createTask(listId, userId, body.title);
     
     return c.json({ success: true, data: task }, 201);
@@ -247,7 +254,8 @@ tasks.put("/tasks/:taskId", async (c) => {
     const taskId = c.req.param("taskId");
     const body = await c.req.json<UpdateTaskRequest>();
     
-    const taskService = new TaskService(c.env.DB);
+    const db = createDrizzleClient(c.env.DB);
+    const taskService = new TaskService(db);
     const task = await taskService.updateTask(taskId, userId, body);
     
     if (!task) {
@@ -276,7 +284,8 @@ tasks.delete("/tasks/:taskId", async (c) => {
     }
     
     const taskId = c.req.param("taskId");
-    const taskService = new TaskService(c.env.DB);
+    const db = createDrizzleClient(c.env.DB);
+    const taskService = new TaskService(db);
     const deleted = await taskService.deleteTask(taskId, userId);
     
     if (!deleted) {

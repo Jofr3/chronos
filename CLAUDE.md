@@ -21,14 +21,17 @@ Chronos is a modern full-stack task management application built as a Bun worksp
 **Layers**:
 - **Routes** (`src/routes/`): Hono route handlers for `/api/auth`, `/api/users`, `/api/tasks`
 - **Services** (`src/services/`): Business logic layer (AuthService, UserService, TaskService)
-- **DB Queries** (`src/db/queries/`): Raw SQL queries and database access functions
+- **DB Queries** (`src/db/queries/`): Type-safe database queries using Drizzle ORM
+- **DB Schema** (`src/db/schema.ts`): Drizzle schema definitions for all tables
+- **DB Client** (`src/db/client.ts`): Drizzle client factory for D1 database
 - **Types** (`src/types/env.ts`): Backend-specific environment types
 
 **Key Patterns**:
 - All routes use the `ApiResponse<T>` wrapper type for consistent responses
 - JWT authentication handled via Web Crypto API (no external libraries)
-- Services are instantiated per-request with DB and secrets from Hono context
+- Services are instantiated per-request with Drizzle client from Hono context
 - Database uses snake_case, TypeScript uses camelCase - conversion happens in query layer
+- Drizzle ORM provides type-safe database operations with zero runtime overhead
 
 **Authentication Flow**:
 - JWT tokens generated/verified in `AuthService` using HS256
@@ -38,9 +41,12 @@ Chronos is a modern full-stack task management application built as a Bun worksp
 
 **Database**:
 - SQLite via Cloudflare D1
-- Migrations in `apps/backend/migrations/` (numbered sequentially)
+- ORM: Drizzle ORM for type-safe queries
+- Schema defined in `src/db/schema.ts` with TypeScript
+- Migrations in `apps/backend/migrations/` (numbered sequentially, SQL files)
 - Tables: users, task_lists, tasks
 - Relationships: users → task_lists → tasks (cascade delete)
+- Drizzle configuration: `drizzle.config.ts`
 
 ### Frontend Architecture
 
@@ -178,20 +184,46 @@ return c.json({
 
 ### Service Layer Pattern
 
-Services encapsulate business logic and are instantiated per-request:
+Services encapsulate business logic and are instantiated per-request with Drizzle client:
 
 ```typescript
 // In route handler
-const service = new AuthService(c.env.DB, c.env.JWT_SECRET);
+const db = createDrizzleClient(c.env.DB);
+const service = new AuthService(db, c.env.JWT_SECRET);
 const result = await service.someMethod();
 ```
 
-### Database Access
+### Database Access with Drizzle ORM
 
-- All queries in `src/db/queries/` files
-- Use prepared statements, never string concatenation
-- Helper functions convert DB rows to TypeScript types
+- Schema defined in `src/db/schema.ts` using Drizzle's schema builder
+- All queries in `src/db/queries/` files using Drizzle query builder
+- Type-safe queries with full TypeScript inference
+- Helper functions convert DB rows to application types
 - Store JSON in SQLite as TEXT (e.g., recurring_days)
+
+**Drizzle Query Example**:
+```typescript
+// Type-safe select with where clause
+const result = await db
+  .select()
+  .from(users)
+  .where(eq(users.email, email))
+  .limit(1);
+
+// Type-safe insert with returning
+const result = await db
+  .insert(users)
+  .values({ email, username, password_hash })
+  .returning();
+```
+
+**Drizzle Schema Generation**:
+```bash
+cd apps/backend
+bunx drizzle-kit generate  # Generate migrations from schema (optional)
+bunx drizzle-kit push      # Push schema directly to database (dev only)
+bunx drizzle-kit studio    # Open Drizzle Studio for database visualization
+```
 
 ## Deployment
 
@@ -219,7 +251,8 @@ Or connect Git repository to Cloudflare Pages:
 - **Runtime**: Bun (dev), Cloudflare Workers (prod backend), Cloudflare Pages (prod frontend)
 - **Backend**: Hono 4.x on Cloudflare Workers
 - **Frontend**: Qwik 1.x with QwikCity
-- **Database**: Cloudflare D1 (SQLite)
+- **Database**: Cloudflare D1 (SQLite) with Drizzle ORM
+- **ORM**: Drizzle ORM 0.45+ for type-safe database operations
 - **Auth**: Custom JWT using Web Crypto API
 - **Type Checking**: TypeScript 5 with strict mode
 - **Code Quality**: ESLint, Prettier

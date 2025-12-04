@@ -1,44 +1,33 @@
-import type { D1 } from "@chronos/types/database";
+import { eq } from "drizzle-orm";
+import type { DrizzleClient } from "../client";
+import { users } from "../schema";
 import type { UserWithPassword } from "@chronos/types/auth";
-
-interface UserRow {
-  id: number;
-  email: string;
-  username: string;
-  first_name: string | null;
-  last_name: string | null;
-  role: "user" | "developer";
-  password_hash: string | null;
-  created_at: string;
-  updated_at: string | null;
-  deleted_at: string | null;
-}
 
 /**
  * Get a user by email including password hash for authentication
  */
 export async function getUserByEmailWithPassword(
-  db: D1,
+  db: DrizzleClient,
   email: string
 ): Promise<UserWithPassword | null> {
-  const stmt = db.prepare(
-    "SELECT id, email, username, first_name, last_name, role, password_hash, created_at, updated_at, deleted_at FROM users WHERE email = ?"
-  ).bind(email);
-  
-  const user = await stmt.first<UserRow>();
+  const result = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
 
-  if (!user) {
+  if (result.length === 0) {
     return null;
   }
 
-  return mapRowToUserWithPassword(user);
+  return mapRowToUserWithPassword(result[0]);
 }
 
 /**
  * Create a new user with password hash
  */
 export async function createUserWithPassword(
-  db: D1,
+  db: DrizzleClient,
   data: {
     email: string;
     username: string;
@@ -48,61 +37,56 @@ export async function createUserWithPassword(
     role?: "user" | "developer";
   }
 ): Promise<UserWithPassword> {
-  const stmt = db.prepare(
-    "INSERT INTO users (email, username, password_hash, first_name, last_name, role) VALUES (?, ?, ?, ?, ?, ?)"
-  ).bind(
-    data.email,
-    data.username,
-    data.passwordHash,
-    data.firstName || null,
-    data.lastName || null,
-    data.role || "user"
-  );
+  const result = await db.insert(users).values({
+    email: data.email,
+    username: data.username,
+    password_hash: data.passwordHash,
+    first_name: data.firstName || null,
+    last_name: data.lastName || null,
+    role: data.role || "user",
+  }).returning();
 
-  const result = await stmt.run();
-
-  if (!result.success) {
-    throw new Error(result.error || "Failed to create user");
+  if (!result || result.length === 0) {
+    throw new Error("Failed to create user");
   }
 
-  const createdUser = await getUserByEmailWithPassword(db, data.email);
-  if (!createdUser) {
-    throw new Error("Failed to retrieve created user");
-  }
-
-  return createdUser;
+  return mapRowToUserWithPassword(result[0]);
 }
 
 /**
  * Check if a user with the given email already exists
  */
-export async function userExistsByEmail(db: D1, email: string): Promise<boolean> {
-  const stmt = db.prepare("SELECT 1 FROM users WHERE email = ?").bind(email);
-  const result = await stmt.first();
-  return result !== null;
+export async function userExistsByEmail(db: DrizzleClient, email: string): Promise<boolean> {
+  const result = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
+
+  return result.length > 0;
 }
 
 /**
  * Get a user by ID
  */
-export async function getUserById(db: D1, id: string): Promise<UserWithPassword | null> {
-  const stmt = db.prepare(
-    "SELECT id, email, username, first_name, last_name, role, password_hash, created_at, updated_at, deleted_at FROM users WHERE id = ?"
-  ).bind(id);
+export async function getUserById(db: DrizzleClient, id: string): Promise<UserWithPassword | null> {
+  const result = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, parseInt(id)))
+    .limit(1);
 
-  const user = await stmt.first<UserRow>();
-
-  if (!user) {
+  if (result.length === 0) {
     return null;
   }
 
-  return mapRowToUserWithPassword(user);
+  return mapRowToUserWithPassword(result[0]);
 }
 
 /**
  * Helper function to map database row to UserWithPassword type
  */
-function mapRowToUserWithPassword(row: UserRow): UserWithPassword {
+function mapRowToUserWithPassword(row: typeof users.$inferSelect): UserWithPassword {
   return {
     id: row.id.toString(),
     email: row.email,

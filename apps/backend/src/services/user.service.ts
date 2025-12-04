@@ -1,9 +1,9 @@
-import type { D1 } from "@chronos/types/database";
+import type { DrizzleClient } from "../db/client";
 import type { User } from "@chronos/types/user";
 import * as userQueries from "../db/queries/users";
 
 export class UserService {
-  constructor(private db: D1) {}
+  constructor(private db: DrizzleClient) {}
 
   async getAllUsers(): Promise<User[]> {
     return userQueries.getAllUsers(this.db);

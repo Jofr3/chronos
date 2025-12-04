@@ -1,26 +1,7 @@
-import type { D1 } from "@chronos/types/database";
+import { eq, desc, asc, and } from "drizzle-orm";
+import type { DrizzleClient } from "../client";
+import { tasks, taskLists } from "../schema";
 import type { Task, TaskList, DayOfWeek } from "@chronos/types";
-
-// Database row types (snake_case from DB)
-interface TaskListRow {
-  id: string;
-  user_id: string;
-  name: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface TaskRow {
-  id: string;
-  list_id: string;
-  title: string;
-  completed: number;
-  due_date: string | null;
-  is_recurring: number;
-  recurring_days: string | null;
-  created_at: string;
-  updated_at: string;
-}
 
 // Helper to parse recurring_days JSON string to DayOfWeek array
 function parseRecurringDays(jsonString: string | null): DayOfWeek[] | null {
@@ -33,147 +14,171 @@ function parseRecurringDays(jsonString: string | null): DayOfWeek[] | null {
 }
 
 // Helper to convert Task row to Task object
-function rowToTask(row: TaskRow): Task {
+function rowToTask(row: typeof tasks.$inferSelect): Task {
   return {
     id: row.id,
     list_id: row.list_id,
     title: row.title,
-    completed: row.completed === 1,
+    completed: row.completed,
     due_date: row.due_date,
-    is_recurring: row.is_recurring === 1,
+    is_recurring: row.is_recurring,
     recurring_days: parseRecurringDays(row.recurring_days),
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
 }
 
+// Helper to convert TaskList row to TaskList object
+function rowToTaskList(row: typeof taskLists.$inferSelect): TaskList {
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    name: row.name,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
 // Task List queries
-export async function getAllTaskLists(db: D1, userId: string): Promise<TaskList[]> {
-  const stmt = db.prepare("SELECT * FROM task_lists WHERE user_id = ? ORDER BY created_at DESC");
-  const result = await stmt.bind(userId).all<TaskListRow>();
+export async function getAllTaskLists(db: DrizzleClient, userId: string): Promise<TaskList[]> {
+  const result = await db
+    .select()
+    .from(taskLists)
+    .where(eq(taskLists.user_id, userId))
+    .orderBy(desc(taskLists.created_at));
 
-  if (!result.success) {
-    throw new Error(result.error || "Failed to fetch task lists");
-  }
-
-  return result.results.map(row => ({
-    id: row.id,
-    user_id: row.user_id,
-    name: row.name,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-  }));
+  return result.map(rowToTaskList);
 }
 
-export async function getTaskListById(db: D1, listId: string, userId: string): Promise<TaskList | null> {
-  const stmt = db.prepare("SELECT * FROM task_lists WHERE id = ? AND user_id = ?");
-  const row = await stmt.bind(listId, userId).first<TaskListRow>();
+export async function getTaskListById(
+  db: DrizzleClient,
+  listId: string,
+  userId: string
+): Promise<TaskList | null> {
+  const result = await db
+    .select()
+    .from(taskLists)
+    .where(and(eq(taskLists.id, listId), eq(taskLists.user_id, userId)))
+    .limit(1);
 
-  if (!row) return null;
+  if (result.length === 0) return null;
 
-  return {
-    id: row.id,
-    user_id: row.user_id,
-    name: row.name,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-  };
+  return rowToTaskList(result[0]);
 }
 
-export async function createTaskList(db: D1, listId: string, userId: string, name: string): Promise<TaskList> {
+export async function createTaskList(
+  db: DrizzleClient,
+  listId: string,
+  userId: string,
+  name: string
+): Promise<TaskList> {
   const now = new Date().toISOString();
-  
-  const stmt = db.prepare("INSERT INTO task_lists (id, user_id, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)");
-  const result = await stmt.bind(listId, userId, name, now, now).run();
 
-  if (!result.success) {
-    throw new Error(result.error || "Failed to create task list");
+  const result = await db
+    .insert(taskLists)
+    .values({
+      id: listId,
+      user_id: userId,
+      name,
+      created_at: now,
+      updated_at: now,
+    })
+    .returning();
+
+  if (!result || result.length === 0) {
+    throw new Error("Failed to create task list");
   }
 
-  return {
-    id: listId,
-    user_id: userId,
-    name,
-    created_at: now,
-    updated_at: now,
-  };
+  return rowToTaskList(result[0]);
 }
 
-export async function updateTaskList(db: D1, listId: string, userId: string, name: string): Promise<TaskList | null> {
+export async function updateTaskList(
+  db: DrizzleClient,
+  listId: string,
+  userId: string,
+  name: string
+): Promise<TaskList | null> {
   const now = new Date().toISOString();
-  
-  const stmt = db.prepare("UPDATE task_lists SET name = ?, updated_at = ? WHERE id = ? AND user_id = ?");
-  const result = await stmt.bind(name, now, listId, userId).run();
 
-  if (!result.success) {
-    throw new Error(result.error || "Failed to update task list");
-  }
+  const result = await db
+    .update(taskLists)
+    .set({
+      name,
+      updated_at: now,
+    })
+    .where(and(eq(taskLists.id, listId), eq(taskLists.user_id, userId)))
+    .returning();
 
-  if (result.meta.rows_written === 0) return null;
+  if (!result || result.length === 0) return null;
 
-  return getTaskListById(db, listId, userId);
+  return rowToTaskList(result[0]);
 }
 
-export async function deleteTaskList(db: D1, listId: string, userId: string): Promise<boolean> {
-  const stmt = db.prepare("DELETE FROM task_lists WHERE id = ? AND user_id = ?");
-  const result = await stmt.bind(listId, userId).run();
+export async function deleteTaskList(db: DrizzleClient, listId: string, userId: string): Promise<boolean> {
+  const result = await db
+    .delete(taskLists)
+    .where(and(eq(taskLists.id, listId), eq(taskLists.user_id, userId)))
+    .returning();
 
-  if (!result.success) {
-    throw new Error(result.error || "Failed to delete task list");
-  }
-
-  return result.meta.rows_written > 0;
+  return result.length > 0;
 }
 
 // Task queries
-export async function getTasksByListId(db: D1, listId: string): Promise<Task[]> {
-  const stmt = db.prepare("SELECT * FROM tasks WHERE list_id = ? ORDER BY created_at ASC");
-  const result = await stmt.bind(listId).all<TaskRow>();
+export async function getTasksByListId(db: DrizzleClient, listId: string): Promise<Task[]> {
+  const result = await db
+    .select()
+    .from(tasks)
+    .where(eq(tasks.list_id, listId))
+    .orderBy(asc(tasks.created_at));
 
-  if (!result.success) {
-    throw new Error(result.error || "Failed to fetch tasks");
-  }
-
-  return result.results.map(rowToTask);
+  return result.map(rowToTask);
 }
 
-export async function getTaskById(db: D1, taskId: string): Promise<Task | null> {
-  const stmt = db.prepare("SELECT * FROM tasks WHERE id = ?");
-  const row = await stmt.bind(taskId).first<TaskRow>();
+export async function getTaskById(db: DrizzleClient, taskId: string): Promise<Task | null> {
+  const result = await db
+    .select()
+    .from(tasks)
+    .where(eq(tasks.id, taskId))
+    .limit(1);
 
-  if (!row) return null;
+  if (result.length === 0) return null;
 
-  return rowToTask(row);
+  return rowToTask(result[0]);
 }
 
-export async function createTask(db: D1, taskId: string, listId: string, title: string): Promise<Task> {
+export async function createTask(
+  db: DrizzleClient,
+  taskId: string,
+  listId: string,
+  title: string
+): Promise<Task> {
   const now = new Date().toISOString();
-  
-  const stmt = db.prepare("INSERT INTO tasks (id, list_id, title, completed, is_recurring, created_at, updated_at) VALUES (?, ?, ?, 0, 0, ?, ?)");
-  const result = await stmt.bind(taskId, listId, title, now, now).run();
 
-  if (!result.success) {
-    throw new Error(result.error || "Failed to create task");
+  const result = await db
+    .insert(tasks)
+    .values({
+      id: taskId,
+      list_id: listId,
+      title,
+      completed: false,
+      is_recurring: false,
+      created_at: now,
+      updated_at: now,
+    })
+    .returning();
+
+  if (!result || result.length === 0) {
+    throw new Error("Failed to create task");
   }
 
-  return {
-    id: taskId,
-    list_id: listId,
-    title,
-    completed: false,
-    due_date: null,
-    is_recurring: false,
-    recurring_days: null,
-    created_at: now,
-    updated_at: now,
-  };
+  return rowToTask(result[0]);
 }
 
 export async function updateTask(
-  db: D1, 
-  taskId: string, 
-  updates: { 
-    title?: string; 
+  db: DrizzleClient,
+  taskId: string,
+  updates: {
+    title?: string;
     completed?: boolean;
     due_date?: string | null;
     is_recurring?: boolean;
@@ -181,55 +186,34 @@ export async function updateTask(
   }
 ): Promise<Task | null> {
   const now = new Date().toISOString();
-  const setParts: string[] = ["updated_at = ?"];
-  const values: (string | number | null)[] = [now];
+  const updateData: Partial<typeof tasks.$inferInsert> = {
+    updated_at: now,
+  };
 
-  if (updates.title !== undefined) {
-    setParts.push("title = ?");
-    values.push(updates.title);
-  }
-
-  if (updates.completed !== undefined) {
-    setParts.push("completed = ?");
-    values.push(updates.completed ? 1 : 0);
-  }
-
-  if (updates.due_date !== undefined) {
-    setParts.push("due_date = ?");
-    values.push(updates.due_date);
-  }
-
-  if (updates.is_recurring !== undefined) {
-    setParts.push("is_recurring = ?");
-    values.push(updates.is_recurring ? 1 : 0);
-  }
-
+  if (updates.title !== undefined) updateData.title = updates.title;
+  if (updates.completed !== undefined) updateData.completed = updates.completed;
+  if (updates.due_date !== undefined) updateData.due_date = updates.due_date;
+  if (updates.is_recurring !== undefined) updateData.is_recurring = updates.is_recurring;
   if (updates.recurring_days !== undefined) {
-    setParts.push("recurring_days = ?");
-    values.push(updates.recurring_days ? JSON.stringify(updates.recurring_days) : null);
+    updateData.recurring_days = updates.recurring_days ? JSON.stringify(updates.recurring_days) : null;
   }
 
-  values.push(taskId);
+  const result = await db
+    .update(tasks)
+    .set(updateData)
+    .where(eq(tasks.id, taskId))
+    .returning();
 
-  const stmt = db.prepare(`UPDATE tasks SET ${setParts.join(", ")} WHERE id = ?`);
-  const result = await stmt.bind(...values).run();
+  if (!result || result.length === 0) return null;
 
-  if (!result.success) {
-    throw new Error(result.error || "Failed to update task");
-  }
-
-  if (result.meta.rows_written === 0) return null;
-
-  return getTaskById(db, taskId);
+  return rowToTask(result[0]);
 }
 
-export async function deleteTask(db: D1, taskId: string): Promise<boolean> {
-  const stmt = db.prepare("DELETE FROM tasks WHERE id = ?");
-  const result = await stmt.bind(taskId).run();
+export async function deleteTask(db: DrizzleClient, taskId: string): Promise<boolean> {
+  const result = await db
+    .delete(tasks)
+    .where(eq(tasks.id, taskId))
+    .returning();
 
-  if (!result.success) {
-    throw new Error(result.error || "Failed to delete task");
-  }
-
-  return result.meta.rows_written > 0;
+  return result.length > 0;
 }
