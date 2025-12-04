@@ -3,17 +3,17 @@ export function getApiBaseUrl(): string {
   if (typeof process !== "undefined" && process.env?.API_BASE_URL) {
     return process.env.API_BASE_URL;
   }
-  
+
   // Vite dev mode
   if (import.meta.env.DEV) {
     return "http://localhost:8787";
   }
-  
+
   // Production
   if (import.meta.env.PROD) {
     return "https://chronos-backend.jofrescari.workers.dev";
   }
-  
+
   // Default fallback for SSR in dev
   return "http://localhost:8787";
 }

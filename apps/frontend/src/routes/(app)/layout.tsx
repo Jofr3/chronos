@@ -15,7 +15,7 @@ export const useAuthCheck = routeLoader$(async ({ redirect, cookie }) => {
     const apiUrl = getApiBaseUrl();
     const response = await fetch(`${apiUrl}/api/auth/me`, {
       headers: {
-        "Authorization": `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
     });
 
@@ -61,12 +61,14 @@ export default component$(() => {
         <nav style="flex: 1; padding: 24px 16px; overflow-y: auto;">
           <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px;">
             <li>
-              <Link 
-                href="/tasks" 
+              <Link
+                href="/tasks"
                 style="display: flex; align-items: center; padding: 14px 16px; border-radius: 8px; text-decoration: none; color: var(--text-primary); font-weight: 500; transition: all 0.2s; border: 1px solid transparent;"
                 onMouseOver$={(e) => {
-                  (e.target as HTMLElement).style.background = "var(--bg-elevated)";
-                  (e.target as HTMLElement).style.borderColor = "var(--border-color-light)";
+                  (e.target as HTMLElement).style.background =
+                    "var(--bg-elevated)";
+                  (e.target as HTMLElement).style.borderColor =
+                    "var(--border-color-light)";
                 }}
                 onMouseOut$={(e) => {
                   (e.target as HTMLElement).style.background = "transparent";
@@ -84,16 +86,19 @@ export default component$(() => {
           <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
             {authData.value.user?.email}
           </div>
-          <a 
-            href="/logout" 
+          <a
+            href="/logout"
             style="display: block; text-align: center; padding: 10px 16px; background: var(--accent-primary); color: white; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 600; transition: all 0.2s; box-shadow: var(--shadow-sm);"
             onMouseOver$={(e) => {
-              (e.target as HTMLElement).style.background = "var(--accent-primary-hover)";
+              (e.target as HTMLElement).style.background =
+                "var(--accent-primary-hover)";
               (e.target as HTMLElement).style.transform = "translateY(-1px)";
-              (e.target as HTMLElement).style.boxShadow = "var(--shadow-accent)";
+              (e.target as HTMLElement).style.boxShadow =
+                "var(--shadow-accent)";
             }}
             onMouseOut$={(e) => {
-              (e.target as HTMLElement).style.background = "var(--accent-primary)";
+              (e.target as HTMLElement).style.background =
+                "var(--accent-primary)";
               (e.target as HTMLElement).style.transform = "translateY(0)";
               (e.target as HTMLElement).style.boxShadow = "var(--shadow-sm)";
             }}

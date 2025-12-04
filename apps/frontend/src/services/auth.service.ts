@@ -1,5 +1,10 @@
 import type { ApiResponse, ApiError } from "@chronos/types/api";
-import type { AuthResponse, LoginRequest, SignupRequest, AuthUser } from "@chronos/types/auth";
+import type {
+  AuthResponse,
+  LoginRequest,
+  SignupRequest,
+  AuthUser,
+} from "@chronos/types/auth";
 import { getApiBaseUrl } from "~/config/env";
 
 const TOKEN_KEY = "chronos_auth_token";
@@ -32,18 +37,21 @@ class AuthService {
       body: JSON.stringify(signupData),
     });
 
-    const data: ApiResponse<AuthResponse> | ApiErrorResponse = await response.json();
+    const data: ApiResponse<AuthResponse> | ApiErrorResponse =
+      await response.json();
 
     if (!response.ok || !data.success) {
       const errorData = data as ApiErrorResponse;
-      throw new Error(errorData.error?.message || errorData.message || "Signup failed");
+      throw new Error(
+        errorData.error?.message || errorData.message || "Signup failed",
+      );
     }
 
     const result = (data as ApiResponse<AuthResponse>).data;
-    
+
     // Store token
     this.setToken(result.token);
-    
+
     return result;
   }
 
@@ -61,18 +69,21 @@ class AuthService {
       body: JSON.stringify(loginData),
     });
 
-    const data: ApiResponse<AuthResponse> | ApiErrorResponse = await response.json();
+    const data: ApiResponse<AuthResponse> | ApiErrorResponse =
+      await response.json();
 
     if (!response.ok || !data.success) {
       const errorData = data as ApiErrorResponse;
-      throw new Error(errorData.error?.message || errorData.message || "Login failed");
+      throw new Error(
+        errorData.error?.message || errorData.message || "Login failed",
+      );
     }
 
     const result = (data as ApiResponse<AuthResponse>).data;
-    
+
     // Store token
     this.setToken(result.token);
-    
+
     return result;
   }
 
@@ -82,7 +93,7 @@ class AuthService {
    */
   async getCurrentUser(): Promise<AuthUser | null> {
     const token = this.getToken();
-    
+
     if (!token) {
       return null;
     }
@@ -91,11 +102,12 @@ class AuthService {
       const response = await fetch(`${this.baseUrl}/api/auth/me`, {
         method: "GET",
         headers: {
-          "Authorization": `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
-      const data: ApiResponse<AuthUser> | ApiErrorResponse = await response.json();
+      const data: ApiResponse<AuthUser> | ApiErrorResponse =
+        await response.json();
 
       if (!response.ok || !data.success) {
         // Token is invalid, clear it

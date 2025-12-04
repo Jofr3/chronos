@@ -26,7 +26,11 @@ class UserService {
 
     if (!response.ok || !data.success) {
       const errorData = data as ApiErrorResponse;
-      throw new Error(errorData.error?.message || errorData.message || "Failed to fetch users");
+      throw new Error(
+        errorData.error?.message ||
+          errorData.message ||
+          "Failed to fetch users",
+      );
     }
 
     return (data as ApiResponse<User[]>).data;
@@ -39,7 +43,7 @@ class UserService {
    */
   async getUserById(id: string): Promise<User | null> {
     const response = await fetch(`${this.baseUrl}/api/users/${id}`);
-    
+
     if (response.status === 404) {
       return null;
     }
@@ -48,7 +52,9 @@ class UserService {
 
     if (!response.ok || !data.success) {
       const errorData = data as ApiErrorResponse;
-      throw new Error(errorData.error?.message || errorData.message || "Failed to fetch user");
+      throw new Error(
+        errorData.error?.message || errorData.message || "Failed to fetch user",
+      );
     }
 
     return (data as ApiResponse<User>).data;
@@ -59,10 +65,10 @@ class UserService {
    * @param userData - User data (email, username, and optional first_name/last_name/role)
    * @returns Promise with created user
    */
-  async createUser(userData: { 
-    email: string; 
-    username: string; 
-    first_name?: string; 
+  async createUser(userData: {
+    email: string;
+    username: string;
+    first_name?: string;
     last_name?: string;
     role?: "user" | "developer";
   }): Promise<User> {
@@ -78,7 +84,11 @@ class UserService {
 
     if (!response.ok || !data.success) {
       const errorData = data as ApiErrorResponse;
-      throw new Error(errorData.error?.message || errorData.message || "Failed to create user");
+      throw new Error(
+        errorData.error?.message ||
+          errorData.message ||
+          "Failed to create user",
+      );
     }
 
     return (data as ApiResponse<User>).data;
@@ -109,7 +119,11 @@ class UserService {
 
     if (!response.ok || !data.success) {
       const errorData = data as ApiErrorResponse;
-      throw new Error(errorData.error?.message || errorData.message || "Failed to create user");
+      throw new Error(
+        errorData.error?.message ||
+          errorData.message ||
+          "Failed to create user",
+      );
     }
 
     return (data as ApiResponse<User>).data;
@@ -123,7 +137,13 @@ class UserService {
    */
   async updateUser(
     id: string,
-    userData: Partial<{ email: string; username: string; first_name: string; last_name: string; role: "user" | "developer" }>
+    userData: Partial<{
+      email: string;
+      username: string;
+      first_name: string;
+      last_name: string;
+      role: "user" | "developer";
+    }>,
   ): Promise<User | null> {
     const response = await fetch(`${this.baseUrl}/api/users/${id}`, {
       method: "PUT",
@@ -141,7 +161,11 @@ class UserService {
 
     if (!response.ok || !data.success) {
       const errorData = data as ApiErrorResponse;
-      throw new Error(errorData.error?.message || errorData.message || "Failed to update user");
+      throw new Error(
+        errorData.error?.message ||
+          errorData.message ||
+          "Failed to update user",
+      );
     }
 
     return (data as ApiResponse<User>).data;
@@ -161,11 +185,16 @@ class UserService {
       return false;
     }
 
-    const data: ApiResponse<{ id: string }> | ApiErrorResponse = await response.json();
+    const data: ApiResponse<{ id: string }> | ApiErrorResponse =
+      await response.json();
 
     if (!response.ok || !data.success) {
       const errorData = data as ApiErrorResponse;
-      throw new Error(errorData.error?.message || errorData.message || "Failed to delete user");
+      throw new Error(
+        errorData.error?.message ||
+          errorData.message ||
+          "Failed to delete user",
+      );
     }
 
     return true;

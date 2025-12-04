@@ -1,5 +1,12 @@
 import { component$, useVisibleTask$ } from "@builder.io/qwik";
-import { routeAction$, Form, zod$, z, Link, useNavigate } from "@builder.io/qwik-city";
+import {
+  routeAction$,
+  Form,
+  zod$,
+  z,
+  Link,
+  useNavigate,
+} from "@builder.io/qwik-city";
 import type { DocumentHead } from "@builder.io/qwik-city";
 import type { ApiResponse, ApiError } from "@chronos/types/api";
 import type { AuthResponse } from "@chronos/types/auth";
@@ -16,7 +23,7 @@ export const useLogin = routeAction$(
   async (data, { fail, cookie }) => {
     try {
       const apiUrl = getApiBaseUrl();
-      
+
       const response = await fetch(`${apiUrl}/api/auth/login`, {
         method: "POST",
         headers: {
@@ -28,12 +35,14 @@ export const useLogin = routeAction$(
         }),
       });
 
-      const result: ApiResponse<AuthResponse> | ApiErrorResponse = await response.json();
+      const result: ApiResponse<AuthResponse> | ApiErrorResponse =
+        await response.json();
 
       if (!response.ok || !result.success) {
         const errorData = result as ApiErrorResponse;
         return fail(400, {
-          message: errorData.error?.message || errorData.message || "Login failed",
+          message:
+            errorData.error?.message || errorData.message || "Login failed",
         });
       }
 
@@ -64,7 +73,7 @@ export const useLogin = routeAction$(
   zod$({
     email: z.string().email("Invalid email format"),
     password: z.string().min(1, "Password is required"),
-  })
+  }),
 );
 
 export default component$(() => {
@@ -85,18 +94,26 @@ export default component$(() => {
       {/* Background decoration */}
       <div style="position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle at 30% 50%, rgba(255, 68, 68, 0.15) 0%, transparent 50%);"></div>
       <div style="position: absolute; bottom: -50%; right: -50%; width: 200%; height: 200%; background: radial-gradient(circle at 70% 50%, rgba(255, 136, 51, 0.15) 0%, transparent 50%);"></div>
-      
+
       <div style="width: 100%; max-width: 440px; padding: 48px; background: var(--bg-secondary); border-radius: 16px; box-shadow: var(--shadow-lg); border: 1px solid var(--border-color); position: relative; z-index: 1;">
         <div style="text-align: center; margin-bottom: 36px;">
           <h1 style="margin: 0 0 8px 0; font-size: 32px; font-weight: 700; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
             Chronos
           </h1>
-          <p style="margin: 0; color: var(--text-secondary); font-size: 15px;">Welcome back! Sign in to continue</p>
+          <p style="margin: 0; color: var(--text-secondary); font-size: 15px;">
+            Welcome back! Sign in to continue
+          </p>
         </div>
 
-        <Form action={loginAction} style="display: flex; flex-direction: column; gap: 24px;">
+        <Form
+          action={loginAction}
+          style="display: flex; flex-direction: column; gap: 24px;"
+        >
           <div style="display: flex; flex-direction: column; gap: 8px;">
-            <label for="email" style="font-weight: 600; font-size: 14px; color: var(--text-primary);">
+            <label
+              for="email"
+              style="font-weight: 600; font-size: 14px; color: var(--text-primary);"
+            >
               Email
             </label>
             <input
@@ -106,11 +123,14 @@ export default component$(() => {
               required
               style="padding: 14px 16px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 15px; background: var(--bg-tertiary); color: var(--text-primary); outline: none; transition: all 0.2s;"
               onFocus$={(e) => {
-                (e.target as HTMLElement).style.borderColor = "var(--accent-primary)";
-                (e.target as HTMLElement).style.boxShadow = "0 0 0 3px rgba(255, 68, 68, 0.1)";
+                (e.target as HTMLElement).style.borderColor =
+                  "var(--accent-primary)";
+                (e.target as HTMLElement).style.boxShadow =
+                  "0 0 0 3px rgba(255, 68, 68, 0.1)";
               }}
               onBlur$={(e) => {
-                (e.target as HTMLElement).style.borderColor = "var(--border-color)";
+                (e.target as HTMLElement).style.borderColor =
+                  "var(--border-color)";
                 (e.target as HTMLElement).style.boxShadow = "none";
               }}
               placeholder="you@example.com"
@@ -123,7 +143,10 @@ export default component$(() => {
           </div>
 
           <div style="display: flex; flex-direction: column; gap: 8px;">
-            <label for="password" style="font-weight: 600; font-size: 14px; color: var(--text-primary);">
+            <label
+              for="password"
+              style="font-weight: 600; font-size: 14px; color: var(--text-primary);"
+            >
               Password
             </label>
             <input
@@ -133,11 +156,14 @@ export default component$(() => {
               required
               style="padding: 14px 16px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 15px; background: var(--bg-tertiary); color: var(--text-primary); outline: none; transition: all 0.2s;"
               onFocus$={(e) => {
-                (e.target as HTMLElement).style.borderColor = "var(--accent-primary)";
-                (e.target as HTMLElement).style.boxShadow = "0 0 0 3px rgba(255, 68, 68, 0.1)";
+                (e.target as HTMLElement).style.borderColor =
+                  "var(--accent-primary)";
+                (e.target as HTMLElement).style.boxShadow =
+                  "0 0 0 3px rgba(255, 68, 68, 0.1)";
               }}
               onBlur$={(e) => {
-                (e.target as HTMLElement).style.borderColor = "var(--border-color)";
+                (e.target as HTMLElement).style.borderColor =
+                  "var(--border-color)";
                 (e.target as HTMLElement).style.boxShadow = "none";
               }}
               placeholder="Enter your password"
@@ -154,7 +180,8 @@ export default component$(() => {
             style="padding: 14px 24px; background: var(--accent-gradient); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow-sm); transition: all 0.3s; margin-top: 8px;"
             onMouseOver$={(e) => {
               (e.target as HTMLElement).style.transform = "translateY(-2px)";
-              (e.target as HTMLElement).style.boxShadow = "var(--shadow-accent)";
+              (e.target as HTMLElement).style.boxShadow =
+                "var(--shadow-accent)";
             }}
             onMouseOut$={(e) => {
               (e.target as HTMLElement).style.transform = "translateY(0)";
@@ -174,9 +201,17 @@ export default component$(() => {
 
         <div style="margin-top: 32px; text-align: center; font-size: 14px; color: var(--text-secondary);">
           Don't have an account?{" "}
-          <Link href="/signup" style="color: var(--accent-secondary); text-decoration: none; font-weight: 600; transition: color 0.2s;"
-            onMouseOver$={(e) => (e.target as HTMLElement).style.color = "var(--accent-secondary-hover)"}
-            onMouseOut$={(e) => (e.target as HTMLElement).style.color = "var(--accent-secondary)"}
+          <Link
+            href="/signup"
+            style="color: var(--accent-secondary); text-decoration: none; font-weight: 600; transition: color 0.2s;"
+            onMouseOver$={(e) =>
+              ((e.target as HTMLElement).style.color =
+                "var(--accent-secondary-hover)")
+            }
+            onMouseOut$={(e) =>
+              ((e.target as HTMLElement).style.color =
+                "var(--accent-secondary)")
+            }
           >
             Create an account
           </Link>

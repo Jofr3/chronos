@@ -5,31 +5,31 @@
   --bg-tertiary: #242424;
   --bg-elevated: #2a2a2a;
   --bg-hover: #323232;
-  
+
   /* Red & Orange Accents */
   --accent-primary: #ff4444;
   --accent-primary-hover: #ff5555;
   --accent-secondary: #ff8833;
   --accent-secondary-hover: #ff9944;
   --accent-gradient: linear-gradient(135deg, #ff4444 0%, #ff8833 100%);
-  
+
   /* Text Colors */
   --text-primary: #ffffff;
   --text-secondary: #b0b0b0;
   --text-tertiary: #808080;
   --text-muted: #606060;
-  
+
   /* Semantic Colors */
   --success: #10b981;
   --success-hover: #059669;
   --error: #ef4444;
   --error-hover: #dc2626;
   --warning: #f59e0b;
-  
+
   /* Borders */
   --border-color: #323232;
   --border-color-light: #404040;
-  
+
   /* Shadows */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
   --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.5);
@@ -44,9 +44,9 @@
 body {
   margin: 0;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
+    "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--bg-primary);

@@ -4,7 +4,15 @@ interface ApiErrorResponse {
   success: false;
   error: ApiError;
 }
-import type { Task, TaskList, TaskListWithTasks, CreateTaskListRequest, CreateTaskRequest, UpdateTaskRequest, UpdateTaskListRequest } from "@chronos/types";
+import type {
+  Task,
+  TaskList,
+  TaskListWithTasks,
+  CreateTaskListRequest,
+  CreateTaskRequest,
+  UpdateTaskRequest,
+  UpdateTaskListRequest,
+} from "@chronos/types";
 import { getApiBaseUrl } from "~/config/env";
 
 class TaskServiceClass {
@@ -17,7 +25,10 @@ class TaskServiceClass {
     return null;
   }
 
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
+  private async request<T>(
+    endpoint: string,
+    options: RequestInit = {},
+  ): Promise<ApiResponse<T>> {
     const token = this.getAuthToken();
     const apiUrl = getApiBaseUrl();
 
@@ -25,7 +36,7 @@ class TaskServiceClass {
       ...options,
       headers: {
         "Content-Type": "application/json",
-        ...(token && { "Authorization": `Bearer ${token}` }),
+        ...(token && { Authorization: `Bearer ${token}` }),
         ...options.headers,
       },
     });
@@ -35,21 +46,27 @@ class TaskServiceClass {
 
   async getAllTaskLists(): Promise<TaskListWithTasks[]> {
     const result = await this.request<TaskListWithTasks[]>("/api/tasks/lists");
-    
+
     if (!result.success) {
       const errorResult = result as any as ApiErrorResponse;
-      throw new Error(errorResult.error?.message || "Failed to fetch task lists");
+      throw new Error(
+        errorResult.error?.message || "Failed to fetch task lists",
+      );
     }
 
     return result.data;
   }
 
   async getTaskList(listId: string): Promise<TaskListWithTasks> {
-    const result = await this.request<TaskListWithTasks>(`/api/tasks/lists/${listId}`);
-    
+    const result = await this.request<TaskListWithTasks>(
+      `/api/tasks/lists/${listId}`,
+    );
+
     if (!result.success) {
       const errorResult = result as any as ApiErrorResponse;
-      throw new Error(errorResult.error?.message || "Failed to fetch task list");
+      throw new Error(
+        errorResult.error?.message || "Failed to fetch task list",
+      );
     }
 
     return result.data;
@@ -64,7 +81,9 @@ class TaskServiceClass {
 
     if (!result.success) {
       const errorResult = result as any as ApiErrorResponse;
-      throw new Error(errorResult.error?.message || "Failed to create task list");
+      throw new Error(
+        errorResult.error?.message || "Failed to create task list",
+      );
     }
 
     return result.data;
@@ -79,29 +98,39 @@ class TaskServiceClass {
 
     if (!result.success) {
       const errorResult = result as any as ApiErrorResponse;
-      throw new Error(errorResult.error?.message || "Failed to update task list");
+      throw new Error(
+        errorResult.error?.message || "Failed to update task list",
+      );
     }
 
     return result.data;
   }
 
   async deleteTaskList(listId: string): Promise<void> {
-    const result = await this.request<{ deleted: boolean }>(`/api/tasks/lists/${listId}`, {
-      method: "DELETE",
-    });
+    const result = await this.request<{ deleted: boolean }>(
+      `/api/tasks/lists/${listId}`,
+      {
+        method: "DELETE",
+      },
+    );
 
     if (!result.success) {
       const errorResult = result as any as ApiErrorResponse;
-      throw new Error(errorResult.error?.message || "Failed to delete task list");
+      throw new Error(
+        errorResult.error?.message || "Failed to delete task list",
+      );
     }
   }
 
   async createTask(listId: string, title: string): Promise<Task> {
     const body: CreateTaskRequest = { title };
-    const result = await this.request<Task>(`/api/tasks/lists/${listId}/tasks`, {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
+    const result = await this.request<Task>(
+      `/api/tasks/lists/${listId}/tasks`,
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      },
+    );
 
     if (!result.success) {
       const errorResult = result as any as ApiErrorResponse;
@@ -126,9 +155,12 @@ class TaskServiceClass {
   }
 
   async deleteTask(taskId: string): Promise<void> {
-    const result = await this.request<{ deleted: boolean }>(`/api/tasks/tasks/${taskId}`, {
-      method: "DELETE",
-    });
+    const result = await this.request<{ deleted: boolean }>(
+      `/api/tasks/tasks/${taskId}`,
+      {
+        method: "DELETE",
+      },
+    );
 
     if (!result.success) {
       const errorResult = result as any as ApiErrorResponse;
