@@ -78,6 +78,24 @@ export default component$(() => {
                 Tasks
               </Link>
             </li>
+            <li>
+              <Link
+                href="/calendars"
+                style="display: flex; align-items: center; padding: 14px 16px; border-radius: 8px; text-decoration: none; color: var(--text-primary); font-weight: 500; transition: all 0.2s; border: 1px solid transparent;"
+                onMouseOver$={(e) => {
+                  (e.target as HTMLElement).style.background =
+                    "var(--bg-elevated)";
+                  (e.target as HTMLElement).style.borderColor =
+                    "var(--border-color-light)";
+                }}
+                onMouseOut$={(e) => {
+                  (e.target as HTMLElement).style.background = "transparent";
+                  (e.target as HTMLElement).style.borderColor = "transparent";
+                }}
+              >
+                Calendar
+              </Link>
+            </li>
           </ul>
         </nav>
 
