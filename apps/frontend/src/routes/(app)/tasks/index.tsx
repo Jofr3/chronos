@@ -345,10 +345,11 @@ export default component$(() => {
       {/* Lists Grid */}
       {!isLoading.value && lists.value.length > 0 && (
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px;">
-          {lists.value.map((list) => (
+          {lists.value.map((list, listIndex) => (
             <div
               key={list.id}
-              style="background: var(--bg-secondary); border-radius: 16px; display: flex; flex-direction: column; max-height: 500px; border: 1px solid var(--border-color); transition: border-color 0.2s;"
+              class="task-list-card"
+              style={`background: var(--bg-secondary); border-radius: 16px; display: flex; flex-direction: column; max-height: 500px; border: 1px solid var(--border-color); transition: border-color 0.2s; animation-delay: ${listIndex * 0.1}s;`}
               onMouseOver$={(e) =>
                 ((e.currentTarget as HTMLElement).style.borderColor =
                   "var(--border-color-light)")
@@ -372,15 +373,13 @@ export default component$(() => {
                 <button
                   onClick$={() => deleteList(list.id)}
                   style="padding: 6px; background: transparent; border: none; color: var(--text-tertiary); cursor: pointer; border-radius: 6px; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"
-                  onMouseOver$={(e) => {
-                    (e.target as HTMLElement).style.color = "var(--error)";
-                    (e.target as HTMLElement).style.background =
-                      "rgba(239, 68, 68, 0.1)";
+                  onMouseEnter$={(e) => {
+                    const btn = (e.target as HTMLElement).closest('button') as HTMLElement;
+                    if (btn) { btn.style.color = "var(--error)"; btn.style.background = "rgba(239, 68, 68, 0.1)"; }
                   }}
-                  onMouseOut$={(e) => {
-                    (e.target as HTMLElement).style.color =
-                      "var(--text-tertiary)";
-                    (e.target as HTMLElement).style.background = "transparent";
+                  onMouseLeave$={(e) => {
+                    const btn = (e.target as HTMLElement).closest('button') as HTMLElement;
+                    if (btn) { btn.style.color = "var(--text-tertiary)"; btn.style.background = "transparent"; }
                   }}
                   title="Delete list"
                 >
@@ -428,17 +427,13 @@ export default component$(() => {
                   <button
                     onClick$={() => addTask(list.id)}
                     style="padding: 10px; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; color: var(--text-secondary);"
-                    onMouseOver$={(e) => {
-                      (e.target as HTMLElement).style.borderColor =
-                        "var(--text-tertiary)";
-                      (e.target as HTMLElement).style.color =
-                        "var(--text-primary)";
+                    onMouseEnter$={(e) => {
+                      const btn = (e.target as HTMLElement).closest('button') as HTMLElement;
+                      if (btn) { btn.style.borderColor = "var(--text-tertiary)"; btn.style.color = "var(--text-primary)"; }
                     }}
-                    onMouseOut$={(e) => {
-                      (e.target as HTMLElement).style.borderColor =
-                        "var(--border-color)";
-                      (e.target as HTMLElement).style.color =
-                        "var(--text-secondary)";
+                    onMouseLeave$={(e) => {
+                      const btn = (e.target as HTMLElement).closest('button') as HTMLElement;
+                      if (btn) { btn.style.borderColor = "var(--border-color)"; btn.style.color = "var(--text-secondary)"; }
                     }}
                     title="Add task"
                   >
@@ -464,19 +459,27 @@ export default component$(() => {
                   </div>
                 ) : (
                   <div style="display: flex; flex-direction: column; gap: 2px;">
-                    {list.tasks.map((task) => (
+                    {list.tasks.map((task, taskIndex) => (
                       <div
                         key={task.id}
                         class="task-item"
-                        style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; transition: background 0.15s; cursor: default;"
-                        onMouseOver$={(e) =>
-                          ((e.currentTarget as HTMLElement).style.background =
-                            "var(--bg-tertiary)")
-                        }
-                        onMouseOut$={(e) =>
-                          ((e.currentTarget as HTMLElement).style.background =
-                            "transparent")
-                        }
+                        style={`display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; transition: background 0.15s; cursor: pointer; animation-delay: ${taskIndex * 0.05}s;`}
+                        onClick$={(e) => {
+                          // Don't toggle if clicking on action buttons
+                          const target = e.target as HTMLElement;
+                          if (target.closest('.task-action-btn')) return;
+                          toggleTask(list.id, task.id);
+                        }}
+                        onMouseEnter$={(e) => {
+                          const target = e.target as HTMLElement;
+                          const taskItem = target.closest('.task-item') as HTMLElement;
+                          if (taskItem) taskItem.style.background = "var(--bg-hover)";
+                        }}
+                        onMouseLeave$={(e) => {
+                          const target = e.target as HTMLElement;
+                          const taskItem = target.closest('.task-item') as HTMLElement;
+                          if (taskItem) taskItem.style.background = "transparent";
+                        }}
                       >
                         {/* Custom Checkbox */}
                         <button
@@ -484,7 +487,7 @@ export default component$(() => {
                           style={{
                             width: "20px",
                             height: "20px",
-                            borderRadius: "6px",
+                            borderRadius: "4px",
                             border: task.completed
                               ? "none"
                               : "2px solid var(--border-color-light)",
@@ -502,11 +505,11 @@ export default component$(() => {
                         >
                           {task.completed && (
                             <svg
-                              width="12"
-                              height="12"
+                              width="14"
+                              height="14"
                               viewBox="0 0 24 24"
                               fill="none"
-                              stroke="white"
+                              stroke="var(--bg-primary)"
                               stroke-width="3"
                             >
                               <path d="M20 6L9 17l-5-5" />
@@ -584,21 +587,21 @@ export default component$(() => {
                         {/* 3-dot Menu Button */}
                         <button
                           onClick$={() => openEditModal(list.id, task)}
-                          style="padding: 4px; background: transparent; border: none; color: var(--text-tertiary); cursor: pointer; border-radius: 4px; transition: all 0.15s; display: flex; align-items: center; justify-content: center;"
-                          onMouseOver$={(e) =>
-                            ((e.target as HTMLElement).style.color =
-                              "var(--text-primary)")
-                          }
-                          onMouseOut$={(e) =>
-                            ((e.target as HTMLElement).style.color =
-                              "var(--text-tertiary)")
-                          }
+                          style="width: 32px; height: 32px; padding: 0; background: transparent; border: none; color: var(--text-tertiary); cursor: pointer; border-radius: 6px; transition: all 0.15s; display: flex; align-items: center; justify-content: center;"
+                          onMouseEnter$={(e) => {
+                            const btn = (e.target as HTMLElement).closest('button') as HTMLElement;
+                            if (btn) btn.style.color = "var(--text-primary)";
+                          }}
+                          onMouseLeave$={(e) => {
+                            const btn = (e.target as HTMLElement).closest('button') as HTMLElement;
+                            if (btn) btn.style.color = "var(--text-tertiary)";
+                          }}
                           class="task-action-btn"
                           title="Edit task"
                         >
                           <svg
-                            width="16"
-                            height="16"
+                            width="18"
+                            height="18"
                             viewBox="0 0 24 24"
                             fill="currentColor"
                           >
@@ -611,21 +614,21 @@ export default component$(() => {
                         {/* Delete Button */}
                         <button
                           onClick$={() => deleteTask(list.id, task.id)}
-                          style="padding: 4px; background: transparent; border: none; color: var(--text-tertiary); cursor: pointer; border-radius: 4px; transition: all 0.15s; display: flex; align-items: center; justify-content: center;"
-                          onMouseOver$={(e) =>
-                            ((e.target as HTMLElement).style.color =
-                              "var(--error)")
-                          }
-                          onMouseOut$={(e) =>
-                            ((e.target as HTMLElement).style.color =
-                              "var(--text-tertiary)")
-                          }
+                          style="width: 32px; height: 32px; padding: 0; background: transparent; border: none; color: var(--text-tertiary); cursor: pointer; border-radius: 6px; transition: all 0.15s; display: flex; align-items: center; justify-content: center;"
+                          onMouseEnter$={(e) => {
+                            const btn = (e.target as HTMLElement).closest('button') as HTMLElement;
+                            if (btn) btn.style.color = "var(--error)";
+                          }}
+                          onMouseLeave$={(e) => {
+                            const btn = (e.target as HTMLElement).closest('button') as HTMLElement;
+                            if (btn) btn.style.color = "var(--text-tertiary)";
+                          }}
                           class="task-action-btn"
                           title="Delete task"
                         >
                           <svg
-                            width="14"
-                            height="14"
+                            width="18"
+                            height="18"
                             viewBox="0 0 24 24"
                             fill="none"
                             stroke="currentColor"
@@ -641,21 +644,27 @@ export default component$(() => {
               </div>
 
               {/* Progress Bar */}
-              {list.tasks.length > 0 && (
-                <div style="padding: 16px 20px; border-top: 1px solid var(--border-color);">
-                  <div style="height: 4px; background: var(--bg-tertiary); border-radius: 2px; overflow: hidden;">
-                    <div
-                      style={{
-                        height: "100%",
-                        width: `${(list.tasks.filter((t) => t.completed).length / list.tasks.length) * 100}%`,
-                        background: "var(--success)",
-                        borderRadius: "2px",
-                        transition: "width 0.3s ease",
-                      }}
-                    />
+              {list.tasks.length > 0 && (() => {
+                const percentage = (list.tasks.filter((t) => t.completed).length / list.tasks.length) * 100;
+                const progressColor = percentage === 100 
+                  ? "var(--success)" 
+                  : "var(--warning)";
+                return (
+                  <div style="padding: 16px 20px; border-top: 1px solid var(--border-color);">
+                    <div style="height: 4px; background: var(--bg-tertiary); border-radius: 2px; overflow: hidden;">
+                      <div
+                        style={{
+                          height: "100%",
+                          width: `${percentage}%`,
+                          background: progressColor,
+                          borderRadius: "2px",
+                          transition: "width 0.3s ease, background 0.3s ease",
+                        }}
+                      />
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
           ))}
         </div>
