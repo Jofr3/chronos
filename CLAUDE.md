@@ -19,12 +19,12 @@ Chronos is a modern full-stack task management application built as a Bun worksp
 **Entry Point**: `apps/backend/src/index.ts`
 
 **Layers**:
-- **Routes** (`src/routes/`): Hono route handlers for `/api/auth`, `/api/users`, `/api/tasks`
+- **Routes** (`src/routes/`): Hono route handlers for `/api/auth`, `/api/users`, `/api/tasks`, `/api/ai`
 - **Services** (`src/services/`): Business logic layer (AuthService, UserService, TaskService)
 - **DB Queries** (`src/db/queries/`): Type-safe database queries using Drizzle ORM
 - **DB Schema** (`src/db/schema.ts`): Drizzle schema definitions for all tables
 - **DB Client** (`src/db/client.ts`): Drizzle client factory for D1 database
-- **Types** (`src/types/env.ts`): Backend-specific environment types
+- **Types** (`src/types/env.ts`): Backend-specific environment types (includes Cloudflare Workers AI types)
 
 **Key Patterns**:
 - All routes use the `ApiResponse<T>` wrapper type for consistent responses
@@ -48,6 +48,12 @@ Chronos is a modern full-stack task management application built as a Bun worksp
 - Relationships: users → task_lists → tasks (cascade delete)
 - Drizzle configuration: `drizzle.config.ts`
 
+**AI Integration**:
+- Cloudflare Workers AI binding (`c.env.AI`) for LLM capabilities
+- Routes at `/api/ai/chat` and `/api/ai/hello`
+- Currently using `@cf/meta/llama-3.1-8b-instruct` model
+- AI binding configured in `wrangler.toml` for all environments
+
 ### Frontend Architecture
 
 **Framework**: Qwik with QwikCity for file-based routing
@@ -58,6 +64,12 @@ Chronos is a modern full-stack task management application built as a Bun worksp
 - `src/routes/admin/` - Admin-only routes (has admin layout)
 - `src/services/` - Frontend service layer for API calls
 - `src/config/` - Configuration (e.g., API base URL)
+- `src/components/` - Reusable Qwik components
+
+**Calendar Integration**:
+- Uses FullCalendar library for task visualization
+- Packages: `@fullcalendar/core`, `@fullcalendar/daygrid`, `@fullcalendar/interaction`, `@fullcalendar/timegrid`
+- Supports day/week/month views and interactive drag-and-drop
 
 **Authentication Pattern**:
 - `routeLoader$` in layout.tsx checks auth cookie
@@ -113,10 +125,14 @@ bun --filter @chronos/frontend build
 ```bash
 cd apps/backend
 
-# Local development (uses local D1 database)
-bunx wrangler d1 execute DB --local --file=migrations/XXXX_migration_name.sql
+# Using migration scripts (recommended)
+bun migrate:local --file=migrations/XXXX_migration_name.sql
+bun migrate:dev --file=migrations/XXXX_migration_name.sql
+bun migrate:pre --file=migrations/XXXX_migration_name.sql
+bun migrate:prod --file=migrations/XXXX_migration_name.sql
 
-# Remote environments
+# Or use wrangler directly
+bunx wrangler d1 execute DB --local --file=migrations/XXXX_migration_name.sql
 bunx wrangler d1 execute DB --remote --env development --file=migrations/XXXX_migration_name.sql
 bunx wrangler d1 execute DB --remote --env preview --file=migrations/XXXX_migration_name.sql
 bunx wrangler d1 execute DB --remote --file=migrations/XXXX_migration_name.sql
@@ -125,8 +141,9 @@ bunx wrangler d1 execute DB --remote --file=migrations/XXXX_migration_name.sql
 **Migration Workflow**:
 1. Create new migration file with sequential number (e.g., `0009_description.sql`)
 2. Write SQL in migration file
-3. Run migration against target environment
-4. Update TypeScript types if schema changed
+3. Run migration against target environment using scripts above
+4. Update Drizzle schema in `src/db/schema.ts` if needed
+5. Update TypeScript types if schema changed
 
 ### Linting & Formatting
 
@@ -217,13 +234,17 @@ const result = await db
   .returning();
 ```
 
-**Drizzle Schema Generation**:
+**Drizzle Kit Commands**:
 ```bash
 cd apps/backend
-bunx drizzle-kit generate  # Generate migrations from schema (optional)
-bunx drizzle-kit push      # Push schema directly to database (dev only)
-bunx drizzle-kit studio    # Open Drizzle Studio for database visualization
+bunx drizzle-kit generate     # Generate migrations from schema changes
+bunx drizzle-kit push         # Push schema directly to database (dev only, use with caution)
+bunx drizzle-kit studio       # Open Drizzle Studio GUI for database visualization/editing
+bunx drizzle-kit introspect   # Generate schema from existing database
+bunx drizzle-kit check        # Validate migration files
 ```
+
+**Note**: Schema changes should typically be done through SQL migrations for production. Use `drizzle-kit generate` to auto-generate migrations, then review/edit before applying.
 
 ## Deployment
 
@@ -254,5 +275,7 @@ Or connect Git repository to Cloudflare Pages:
 - **Database**: Cloudflare D1 (SQLite) with Drizzle ORM
 - **ORM**: Drizzle ORM 0.45+ for type-safe database operations
 - **Auth**: Custom JWT using Web Crypto API
+- **AI**: Cloudflare Workers AI (Llama 3.1 8B Instruct)
+- **Calendar**: FullCalendar 6.x for task visualization
 - **Type Checking**: TypeScript 5 with strict mode
 - **Code Quality**: ESLint, Prettier

@@ -2,15 +2,15 @@
   "name": "@chronos/backend",
   "type": "module",
   "scripts": {
-    "dev": "bunx wrangler dev --local",
-    "dev:remote": "bunx wrangler dev --env development",
-    "pre:remote": "bunx wrangler dev --env preview",
-    "prod:remote": "bunx wrangler dev",
+    "dev": "bunx wrangler dev --env development & bunx drizzle-kit studio",
+    "pre": "bunx wrangler dev --env preview",
+    "prod": "bunx wrangler dev",
+
     "build": "bun build src/index.ts --outfile=dist/index.js --target=bun",
-    "migrate:local": "bunx wrangler d1 execute DB --local",
-    "migrate:dev": "bunx wrangler d1 execute DB --remote --env development",
-    "migrate:pre": "bunx wrangler d1 execute DB --remote --env preview",
-    "migrate:prod": "bunx wrangler d1 execute DB --remote"
+
+    "migrate:dev": "bunx wrangler d1 execute DB --env development",
+    "migrate:pre": "bunx wrangler d1 execute DB --env preview",
+    "migrate:prod": "bunx wrangler d1 execute DB"
   },
   "dependencies": {
     "@chronos/types": "workspace:*",
@@ -19,6 +19,7 @@
     "wrangler": "^4.50.0"
   },
   "devDependencies": {
+    "better-sqlite3": "^12.5.0",
     "drizzle-kit": "^0.31.8"
   }
 }
