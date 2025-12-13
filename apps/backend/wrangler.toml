@@ -10,6 +10,10 @@ binding = "DB"
 database_name = "chronos-database"
 database_id = "c2ac623f-5a57-4c1e-9d01-731a4ab8f97f"
 
+[ai]
+binding = "AI"
+remote = true
+
 [env.development]
 [env.development.vars]
 JWT_SECRET = "dev-secret-change-in-production"
@@ -17,7 +21,12 @@ JWT_SECRET = "dev-secret-change-in-production"
 [[env.development.d1_databases]]
 binding = "DB"
 database_name = "chronos-database-development"
-database_id = "046daf02-adb5-400c-9737-afbf90d03d59"
+database_id = "c2ac623f-5a57-4c1e-9d01-731a4ab8f97f"
+remote = false
+
+[env.development.ai]
+binding = "AI"
+remote = true
 
 [env.preview]
 [env.preview.vars]
@@ -27,3 +36,7 @@ JWT_SECRET = "preview-secret-change-in-production"
 binding = "DB"
 database_name = "chronos-database-preview"
 database_id = "2659ab56-6f7a-41e8-9073-8e7436a9c46f"
+
+[env.preview.ai]
+binding = "AI"
+remote = true
