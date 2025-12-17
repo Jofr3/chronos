@@ -20,7 +20,7 @@ interface ApiErrorResponse {
 }
 
 export const useSignup = routeAction$(
-  async (data, { fail, cookie }) => {
+  async (data, { fail }) => {
     try {
       // Validate passwords match
       if (data.password !== data.confirmPassword) {
