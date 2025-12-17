@@ -4,8 +4,7 @@
   "private": true,
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
-    "dev": "bun --filter @chronos/frontend dev & bun --filter @chronos/backend dev",
-    "dev:remote": "bun --filter @chronos/frontend dev & bun --filter @chronos/backend dev:remote",
+    "dev": "bun --filter '*' dev",
     "build": "bun --filter '*' build"
   },
   "devDependencies": {

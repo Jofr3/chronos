@@ -2,9 +2,11 @@
   "name": "@chronos/backend",
   "type": "module",
   "scripts": {
-    "dev": "bunx wrangler dev --env development & bunx drizzle-kit studio",
+    "dev": "bunx wrangler dev --env development",
     "pre": "bunx wrangler dev --env preview",
     "prod": "bunx wrangler dev",
+
+    "drizzle": "bunx drizzle-kit studio",
 
     "build": "bun build src/index.ts --outfile=dist/index.js --target=bun",
 
