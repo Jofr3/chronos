@@ -4,7 +4,7 @@
   --bg-secondary: #1a1a1a;
   --bg-tertiary: #242424;
   --bg-elevated: #2a2a2a;
-  --bg-hover: #323232;
+  --bg-hover: #2e2e2e;
 
   /* Red & Orange Accents */
   --accent-primary: #ff4444;
@@ -51,4 +51,68 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--bg-primary);
   color: var(--text-primary);
+}
+
+/* Popup Animations */
+@keyframes popupOverlayIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes popupIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes checkmarkIn {
+  from {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+/* Task Card Animations */
+@keyframes taskCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes taskListIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.task-item {
+  animation: taskCardIn 0.3s ease-out backwards;
+}
+
+.task-list-card {
+  animation: taskListIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
 }

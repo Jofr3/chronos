@@ -1,4 +1,4 @@
-import { component$, useVisibleTask$ } from "@builder.io/qwik";
+import { component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
 import {
   routeAction$,
   Form,
@@ -54,19 +54,11 @@ export const useSignup = routeAction$(
         });
       }
 
-      const authData = (result as ApiResponse<AuthResponse>).data;
-
-      // Set the auth token as a cookie
-      cookie.set("chronos_auth_token", authData.token, {
-        path: "/",
-        sameSite: "lax",
-        maxAge: 60 * 60 * 24 * 7, // 7 days
-      });
-
-      // Return success - will handle redirect client-side
+      // Don't set the cookie - user needs to login after signup
+      // Return success - will show alert and redirect to login
       return {
         success: true,
-        redirectTo: "/tasks",
+        redirectTo: "/login",
       };
     } catch (error) {
       // Check if it's a redirect (don't catch those)
@@ -91,18 +83,52 @@ export const useSignup = routeAction$(
 export default component$(() => {
   const signupAction = useSignup();
   const nav = useNavigate();
+  const showSuccessPopup = useSignal(false);
 
   // Handle client-side redirect after successful signup
   // eslint-disable-next-line qwik/no-use-visible-task
   useVisibleTask$(({ track }) => {
     const value = track(() => signupAction.value);
     if (value?.success && value?.redirectTo) {
-      nav(value.redirectTo);
+      showSuccessPopup.value = true;
     }
   });
 
   return (
     <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg-primary); position: relative; overflow: hidden; padding: 24px;">
+      {/* Success Popup */}
+      {showSuccessPopup.value && (
+        <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; animation: popupOverlayIn 0.3s ease-out;">
+          <div style="background: var(--bg-secondary); padding: 32px 48px; border-radius: 16px; box-shadow: var(--shadow-lg); border: 1px solid var(--border-color); text-align: center; animation: popupIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);">
+            <div style="width: 64px; height: 64px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; animation: checkmarkIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both;">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </div>
+            <h2 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 700; color: var(--text-primary);">
+              Account Created!
+            </h2>
+            <p style="margin: 0 0 24px 0; color: var(--text-secondary); font-size: 15px;">
+              Your account has been created successfully.
+            </p>
+            <button
+              onClick$={() => nav("/login")}
+              style="padding: 12px 32px; background: var(--accent-gradient); color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow-sm); transition: all 0.3s;"
+              onMouseOver$={(e) => {
+                (e.target as HTMLElement).style.transform = "translateY(-2px)";
+                (e.target as HTMLElement).style.boxShadow = "var(--shadow-accent)";
+              }}
+              onMouseOut$={(e) => {
+                (e.target as HTMLElement).style.transform = "translateY(0)";
+                (e.target as HTMLElement).style.boxShadow = "var(--shadow-sm)";
+              }}
+            >
+              Go to Login
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Background decoration */}
       <div style="position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle at 30% 50%, rgba(255, 68, 68, 0.15) 0%, transparent 50%);"></div>
       <div style="position: absolute; bottom: -50%; right: -50%; width: 200%; height: 200%; background: radial-gradient(circle at 70% 50%, rgba(255, 136, 51, 0.15) 0%, transparent 50%);"></div>
@@ -202,7 +228,7 @@ export default component$(() => {
                 type="text"
                 id="firstName"
                 name="firstName"
-                style="padding: 14px 16px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 15px; background: var(--bg-tertiary); color: var(--text-primary); outline: none; transition: all 0.2s;"
+                style="width: 100%; box-sizing: border-box; padding: 14px 16px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 15px; background: var(--bg-tertiary); color: var(--text-primary); outline: none; transition: all 0.2s;"
                 onFocus$={(e) => {
                   (e.target as HTMLElement).style.borderColor =
                     "var(--accent-secondary)";
@@ -232,7 +258,7 @@ export default component$(() => {
                 type="text"
                 id="lastName"
                 name="lastName"
-                style="padding: 14px 16px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 15px; background: var(--bg-tertiary); color: var(--text-primary); outline: none; transition: all 0.2s;"
+                style="width: 100%; box-sizing: border-box; padding: 14px 16px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 15px; background: var(--bg-tertiary); color: var(--text-primary); outline: none; transition: all 0.2s;"
                 onFocus$={(e) => {
                   (e.target as HTMLElement).style.borderColor =
                     "var(--accent-secondary)";
