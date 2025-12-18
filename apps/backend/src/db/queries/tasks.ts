@@ -134,6 +134,27 @@ export async function getTasksByListId(db: DrizzleClient, listId: string): Promi
   return result.map(rowToTask);
 }
 
+export async function getAllTasksByUserId(db: DrizzleClient, userId: string): Promise<Task[]> {
+  const result = await db
+    .select({
+      id: tasks.id,
+      list_id: tasks.list_id,
+      title: tasks.title,
+      completed: tasks.completed,
+      due_date: tasks.due_date,
+      is_recurring: tasks.is_recurring,
+      recurring_days: tasks.recurring_days,
+      created_at: tasks.created_at,
+      updated_at: tasks.updated_at,
+    })
+    .from(tasks)
+    .innerJoin(taskLists, eq(tasks.list_id, taskLists.id))
+    .where(eq(taskLists.user_id, userId))
+    .orderBy(asc(tasks.created_at));
+
+  return result.map(rowToTask);
+}
+
 export async function getTaskById(db: DrizzleClient, taskId: string): Promise<Task | null> {
   const result = await db
     .select()

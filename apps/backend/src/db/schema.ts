@@ -80,6 +80,35 @@ export const tasks = sqliteTable(
   })
 );
 
+/**
+ * Events table
+ */
+export const events = sqliteTable(
+  "events",
+  {
+    id: text("id").primaryKey(),
+    user_id: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    task_id: text("task_id").references(() => tasks.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    date: text("date").notNull(), // ISO date string (YYYY-MM-DD)
+    start_time: text("start_time").notNull(), // Time in HH:MM format
+    end_time: text("end_time").notNull(), // Time in HH:MM format
+    created_at: text("created_at")
+      .notNull()
+      .default(sql`(datetime('now'))`),
+    updated_at: text("updated_at")
+      .notNull()
+      .default(sql`(datetime('now'))`),
+  },
+  (table) => ({
+    userIdIdx: index("idx_events_user_id").on(table.user_id),
+    taskIdIdx: index("idx_events_task_id").on(table.task_id),
+    dateIdx: index("idx_events_date").on(table.date),
+  })
+);
+
 // Type exports for use in application code
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -89,3 +118,6 @@ export type NewTaskList = typeof taskLists.$inferInsert;
 
 export type Task = typeof tasks.$inferSelect;
 export type NewTask = typeof tasks.$inferInsert;
+
+export type Event = typeof events.$inferSelect;
+export type NewEvent = typeof events.$inferInsert;

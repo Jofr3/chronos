@@ -4,19 +4,70 @@ import {
   useVisibleTask$,
   noSerialize,
   type NoSerialize,
+  $,
 } from "@builder.io/qwik";
 import type { DocumentHead } from "@builder.io/qwik-city";
 import { Calendar } from "@fullcalendar/core";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
+import { getApiBaseUrl } from "~/config/env";
 
 export default component$(() => {
   const calendarRef = useSignal<HTMLDivElement>();
   const calendarInstance = useSignal<NoSerialize<Calendar>>();
+  const isScheduling = useSignal(false);
+  const scheduleMessage = useSignal<string>("");
 
-  // Initialize FullCalendar on client side
-  // eslint-disable-next-line qwik/no-use-visible-task
+  const handleAISchedule = $(async () => {
+    isScheduling.value = true;
+    scheduleMessage.value = "";
+
+    try {
+      // Get auth token from cookie
+      const match = document.cookie.match(/chronos_auth_token=([^;]+)/);
+      const token = match ? match[1] : null;
+
+      if (!token) {
+        scheduleMessage.value = "Authentication required";
+        return;
+      }
+
+      const apiUrl = getApiBaseUrl();
+      const response = await fetch(`${apiUrl}/api/ai/schedule`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      // Check if response is ok before parsing JSON
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("API Error:", response.status, errorText);
+        scheduleMessage.value = `Failed to schedule: ${response.status} ${response.statusText}`;
+        return;
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        scheduleMessage.value = result.message || "Tasks scheduled successfully!";
+        // Optionally refresh calendar events here
+      } else {
+        scheduleMessage.value = result.error?.message || "Failed to schedule tasks";
+      }
+    } catch (error) {
+      console.error("Schedule error:", error);
+      scheduleMessage.value = error instanceof Error 
+        ? `Error: ${error.message}`
+        : "An error occurred while scheduling tasks";
+    } finally {
+      isScheduling.value = false;
+    }
+  });
+
   useVisibleTask$(({ cleanup }) => {
     if (!calendarRef.value) return;
 
@@ -34,22 +85,7 @@ export default component$(() => {
       dayMaxEvents: true,
       weekends: true,
       height: "auto",
-      // Sample events for demonstration
-      events: [
-        {
-          title: "Sample Event",
-          start: new Date().toISOString().split("T")[0],
-          backgroundColor: "var(--accent-primary)",
-          borderColor: "var(--accent-primary)",
-        },
-        {
-          title: "Meeting",
-          start: new Date(Date.now() + 86400000).toISOString().split("T")[0],
-          end: new Date(Date.now() + 86400000 * 2).toISOString().split("T")[0],
-          backgroundColor: "var(--accent-secondary)",
-          borderColor: "var(--accent-secondary)",
-        },
-      ],
+      events: [],
       // Event handlers
       dateClick: (info) => {
         console.log("Date clicked:", info.dateStr);
@@ -77,7 +113,49 @@ export default component$(() => {
         <h1 style="margin: 0; font-size: 28px; color: var(--text-primary); font-weight: 600; letter-spacing: -0.5px;">
           Calendar
         </h1>
+        <button
+          onClick$={handleAISchedule}
+          disabled={isScheduling.value}
+          style={{
+            padding: "12px 24px",
+            background: "var(--accent-primary)",
+            color: "white",
+            border: "none",
+            borderRadius: "8px",
+            fontSize: "14px",
+            fontWeight: "500",
+            cursor: isScheduling.value ? "not-allowed" : "pointer",
+            opacity: isScheduling.value ? "0.6" : "1",
+            transition: "all 0.2s",
+          }}
+        >
+          {isScheduling.value ? "Scheduling..." : "🤖 AI Schedule Tasks"}
+        </button>
       </div>
+
+      {/* Schedule Message */}
+      {scheduleMessage.value && (
+        <div
+          style={{
+            padding: "12px 16px",
+            marginBottom: "20px",
+            background: scheduleMessage.value.includes("success")
+              ? "rgba(34, 197, 94, 0.1)"
+              : "rgba(239, 68, 68, 0.1)",
+            color: scheduleMessage.value.includes("success")
+              ? "rgb(34, 197, 94)"
+              : "rgb(239, 68, 68)",
+            borderRadius: "8px",
+            border: `1px solid ${
+              scheduleMessage.value.includes("success")
+                ? "rgba(34, 197, 94, 0.3)"
+                : "rgba(239, 68, 68, 0.3)"
+            }`,
+          }}
+        >
+          {scheduleMessage.value}
+        </div>
+      )}
 
       {/* Calendar Container */}
       <div

@@ -10,7 +10,7 @@
 
     "build": "bun build src/index.ts --outfile=dist/index.js --target=bun",
 
-    "migrate:dev": "bunx wrangler d1 execute DB --env development",
+    "migrate:dev": "bunx wrangler d1 execute DB --remote --env development",
     "migrate:pre": "bunx wrangler d1 execute DB --env preview",
     "migrate:prod": "bunx wrangler d1 execute DB"
   },

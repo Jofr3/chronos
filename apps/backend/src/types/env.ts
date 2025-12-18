@@ -1,7 +1,7 @@
-import type { D1 } from "@chronos/types/database";
+import type { D1Database } from "@cloudflare/workers-types";
 
 export interface Env {
-  DB: D1;
+  DB: D1Database;
   JWT_SECRET: string;
   AI: Ai;
 }
