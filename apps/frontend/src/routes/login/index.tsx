@@ -46,7 +46,7 @@ export const useLogin = routeAction$(
         });
       }
 
-      const authData = (result as ApiResponse<AuthResponse>).data;
+      const authData = (result as ApiResponse<AuthResponse>).data!;
 
       // Set the auth token as a cookie
       cookie.set("chronos_auth_token", authData.token, {

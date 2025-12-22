@@ -47,7 +47,7 @@ class AuthService {
       );
     }
 
-    const result = (data as ApiResponse<AuthResponse>).data;
+    const result = (data as ApiResponse<AuthResponse>).data!;
 
     // Store token
     this.setToken(result.token);
@@ -79,7 +79,7 @@ class AuthService {
       );
     }
 
-    const result = (data as ApiResponse<AuthResponse>).data;
+    const result = (data as ApiResponse<AuthResponse>).data!;
 
     // Store token
     this.setToken(result.token);
@@ -115,7 +115,7 @@ class AuthService {
         return null;
       }
 
-      return (data as ApiResponse<AuthUser>).data;
+      return (data as ApiResponse<AuthUser>).data ?? null;
     } catch {
       return null;
     }

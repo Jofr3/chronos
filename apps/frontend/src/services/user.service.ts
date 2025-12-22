@@ -33,7 +33,7 @@ class UserService {
       );
     }
 
-    return (data as ApiResponse<User[]>).data;
+    return (data as ApiResponse<User[]>).data!;
   }
 
   /**
@@ -57,7 +57,7 @@ class UserService {
       );
     }
 
-    return (data as ApiResponse<User>).data;
+    return (data as ApiResponse<User>).data ?? null;
   }
 
   /**
@@ -91,7 +91,7 @@ class UserService {
       );
     }
 
-    return (data as ApiResponse<User>).data;
+    return (data as ApiResponse<User>).data!;
   }
 
   /**
@@ -126,7 +126,7 @@ class UserService {
       );
     }
 
-    return (data as ApiResponse<User>).data;
+    return (data as ApiResponse<User>).data!;
   }
 
   /**
@@ -168,7 +168,7 @@ class UserService {
       );
     }
 
-    return (data as ApiResponse<User>).data;
+    return (data as ApiResponse<User>).data ?? null;
   }
 
   /**

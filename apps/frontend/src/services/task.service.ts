@@ -54,7 +54,7 @@ class TaskServiceClass {
       );
     }
 
-    return result.data;
+    return result.data!;
   }
 
   async getTaskList(listId: string): Promise<TaskListWithTasks> {
@@ -69,7 +69,7 @@ class TaskServiceClass {
       );
     }
 
-    return result.data;
+    return result.data!;
   }
 
   async createTaskList(name: string): Promise<TaskList> {
@@ -86,7 +86,7 @@ class TaskServiceClass {
       );
     }
 
-    return result.data;
+    return result.data!;
   }
 
   async updateTaskList(listId: string, name: string): Promise<TaskList> {
@@ -103,7 +103,7 @@ class TaskServiceClass {
       );
     }
 
-    return result.data;
+    return result.data!;
   }
 
   async deleteTaskList(listId: string): Promise<void> {
@@ -137,7 +137,7 @@ class TaskServiceClass {
       throw new Error(errorResult.error?.message || "Failed to create task");
     }
 
-    return result.data;
+    return result.data!;
   }
 
   async updateTask(taskId: string, updates: UpdateTaskRequest): Promise<Task> {
@@ -151,7 +151,7 @@ class TaskServiceClass {
       throw new Error(errorResult.error?.message || "Failed to update task");
     }
 
-    return result.data;
+    return result.data!;
   }
 
   async deleteTask(taskId: string): Promise<void> {
