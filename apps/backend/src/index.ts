@@ -5,6 +5,7 @@ import users from "./routes/users";
 import auth from "./routes/auth";
 import tasks from "./routes/tasks";
 import ai from "./routes/ai";
+import events from "./routes/events";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -16,5 +17,6 @@ app.route("/api/users", users);
 app.route("/api/auth", auth);
 app.route("/api/tasks", tasks);
 app.route("/api/ai", ai);
+app.route("/api/events", events);
 
 export default app;

@@ -12,12 +12,43 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { getApiBaseUrl } from "~/config/env";
+import { getEvents } from "~/services/event.service";
+import type { Event } from "@chronos/types";
 
 export default component$(() => {
   const calendarRef = useSignal<HTMLDivElement>();
   const calendarInstance = useSignal<NoSerialize<Calendar>>();
   const isScheduling = useSignal(false);
   const scheduleMessage = useSignal<string>("");
+  const isLoadingEvents = useSignal(true);
+
+  const loadEvents = $(async () => {
+    try {
+      const events = await getEvents();
+      
+      // Convert events to FullCalendar format
+      const calendarEvents = events.map((event: Event) => ({
+        id: event.id,
+        title: event.title,
+        start: `${event.date}T${event.start_time}`,
+        end: `${event.date}T${event.end_time}`,
+        extendedProps: {
+          task_id: event.task_id,
+        },
+      }));
+
+      // Update calendar with events
+      if (calendarInstance.value) {
+        calendarInstance.value.removeAllEvents();
+        calendarInstance.value.addEventSource(calendarEvents);
+      }
+
+      isLoadingEvents.value = false;
+    } catch (error) {
+      console.error("Failed to load events:", error);
+      isLoadingEvents.value = false;
+    }
+  });
 
   const handleAISchedule = $(async () => {
     isScheduling.value = true;
@@ -54,7 +85,8 @@ export default component$(() => {
 
       if (result.success) {
         scheduleMessage.value = result.message || "Tasks scheduled successfully!";
-        // Optionally refresh calendar events here
+        // Refresh calendar events
+        await loadEvents();
       } else {
         scheduleMessage.value = result.error?.message || "Failed to schedule tasks";
       }
@@ -101,6 +133,9 @@ export default component$(() => {
 
     calendar.render();
     calendarInstance.value = noSerialize(calendar);
+
+    // Load events after calendar is initialized
+    loadEvents();
 
     cleanup(() => {
       calendar.destroy();
