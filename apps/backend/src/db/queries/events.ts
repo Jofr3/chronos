@@ -72,9 +72,18 @@ export async function createManyEvents(
     updated_at: now,
   }));
 
-  const result = await db.insert(events).values(values).returning();
+  // D1 has a limit of ~50 SQL variables per statement
+  // Each event has 9 fields, so we can insert ~5 events per batch
+  const BATCH_SIZE = 5;
+  const results: Event[] = [];
 
-  return result.map(rowToEvent);
+  for (let i = 0; i < values.length; i += BATCH_SIZE) {
+    const batch = values.slice(i, i + BATCH_SIZE);
+    const batchResult = await db.insert(events).values(batch).returning();
+    results.push(...batchResult.map(rowToEvent));
+  }
+
+  return results;
 }
 
 export async function getUserEvents(
