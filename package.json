@@ -3,10 +3,7 @@
   "type": "module",
   "private": true,
   "workspaces": ["apps/*", "packages/*"],
-  "scripts": {
-    "dev": "bun --filter '*' dev",
-    "build": "bun --filter '*' build"
-  },
+  "scripts": {},
   "devDependencies": {
     "@types/bun": "latest",
     "typescript": "^5"
