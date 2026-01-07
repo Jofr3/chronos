@@ -105,25 +105,19 @@ export default component$(() => {
 
   return (
     <div>
-      <h1 style="margin-top: 0; font-size: 36px; color: var(--text-primary); font-weight: 700;">
+      <h1 class="admin-page-title">
         Users
       </h1>
 
       {/* Create User Form */}
-      <div style="margin-bottom: 32px; padding: 28px; background: var(--bg-secondary); border-radius: 12px; box-shadow: var(--shadow-md); border: 1px solid var(--border-color);">
-        <h2 style="margin-top: 0; font-size: 22px; color: var(--text-primary); font-weight: 600; margin-bottom: 24px;">
+      <div class="create-user-section">
+        <h2 class="create-user-title">
           Create New User
         </h2>
 
-        <Form
-          action={createUserAction}
-          style="display: flex; flex-direction: column; gap: 20px; max-width: 600px;"
-        >
-          <div style="display: flex; flex-direction: column; gap: 8px;">
-            <label
-              for="email"
-              style="font-weight: 500; color: var(--text-primary); font-size: 14px;"
-            >
+        <Form action={createUserAction} class="create-user-form">
+          <div class="admin-form-field">
+            <label for="email" class="admin-form-label">
               Email:
             </label>
             <input
@@ -131,24 +125,13 @@ export default component$(() => {
               id="email"
               name="email"
               required
-              style="padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background: var(--bg-tertiary); color: var(--text-primary); transition: border-color 0.2s;"
-              onFocus$={(e) =>
-                ((e.target as HTMLElement).style.borderColor =
-                  "var(--accent-primary)")
-              }
-              onBlur$={(e) =>
-                ((e.target as HTMLElement).style.borderColor =
-                  "var(--border-color)")
-              }
+              class="admin-form-input"
               placeholder="user@example.com"
             />
           </div>
 
-          <div style="display: flex; flex-direction: column; gap: 8px;">
-            <label
-              for="username"
-              style="font-weight: 500; color: var(--text-primary); font-size: 14px;"
-            >
+          <div class="admin-form-field">
+            <label for="username" class="admin-form-label">
               Username:
             </label>
             <input
@@ -156,24 +139,13 @@ export default component$(() => {
               id="username"
               name="username"
               required
-              style="padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background: var(--bg-tertiary); color: var(--text-primary); transition: border-color 0.2s;"
-              onFocus$={(e) =>
-                ((e.target as HTMLElement).style.borderColor =
-                  "var(--accent-primary)")
-              }
-              onBlur$={(e) =>
-                ((e.target as HTMLElement).style.borderColor =
-                  "var(--border-color)")
-              }
+              class="admin-form-input"
               placeholder="johndoe"
             />
           </div>
 
-          <div style="display: flex; flex-direction: column; gap: 8px;">
-            <label
-              for="password"
-              style="font-weight: 500; color: var(--text-primary); font-size: 14px;"
-            >
+          <div class="admin-form-field">
+            <label for="password" class="admin-form-label">
               Password:
             </label>
             <input
@@ -181,32 +153,24 @@ export default component$(() => {
               id="password"
               name="password"
               required
-              style="padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background: var(--bg-tertiary); color: var(--text-primary); transition: border-color 0.2s;"
-              onFocus$={(e) =>
-                ((e.target as HTMLElement).style.borderColor =
-                  "var(--accent-primary)")
-              }
-              onBlur$={(e) =>
-                ((e.target as HTMLElement).style.borderColor =
-                  "var(--border-color)")
-              }
+              class="admin-form-input"
               placeholder="At least 8 characters"
             />
             {createUserAction.value?.fieldErrors?.password && (
-              <span style="color: var(--error); font-size: 13px; font-weight: 500;">
+              <span class="auth-error">
                 {createUserAction.value.fieldErrors.password}
               </span>
             )}
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-            <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div class="admin-form-field grid">
+            <div class="admin-form-field">
               <label
                 for="first_name"
-                style="font-weight: 500; color: var(--text-primary); font-size: 14px;"
+                class="admin-form-label"
               >
                 First Name{" "}
-                <span style="color: var(--text-tertiary); font-weight: 400;">
+                <span class="admin-optional-text">
                   (optional)
                 </span>
                 :
@@ -215,26 +179,18 @@ export default component$(() => {
                 type="text"
                 id="first_name"
                 name="first_name"
-                style="padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background: var(--bg-tertiary); color: var(--text-primary); transition: border-color 0.2s;"
-                onFocus$={(e) =>
-                  ((e.target as HTMLElement).style.borderColor =
-                    "var(--accent-secondary)")
-                }
-                onBlur$={(e) =>
-                  ((e.target as HTMLElement).style.borderColor =
-                    "var(--border-color)")
-                }
+                class="admin-form-input secondary"
                 placeholder="John"
               />
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div class="admin-form-field">
               <label
                 for="last_name"
-                style="font-weight: 500; color: var(--text-primary); font-size: 14px;"
+                class="admin-form-label"
               >
                 Last Name{" "}
-                <span style="color: var(--text-tertiary); font-weight: 400;">
+                <span class="admin-optional-text">
                   (optional)
                 </span>
                 :
@@ -243,39 +199,23 @@ export default component$(() => {
                 type="text"
                 id="last_name"
                 name="last_name"
-                style="padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background: var(--bg-tertiary); color: var(--text-primary); transition: border-color 0.2s;"
-                onFocus$={(e) =>
-                  ((e.target as HTMLElement).style.borderColor =
-                    "var(--accent-secondary)")
-                }
-                onBlur$={(e) =>
-                  ((e.target as HTMLElement).style.borderColor =
-                    "var(--border-color)")
-                }
+                class="admin-form-input secondary"
                 placeholder="Doe"
               />
             </div>
           </div>
 
-          <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div class="admin-form-field">
             <label
               for="role"
-              style="font-weight: 500; color: var(--text-primary); font-size: 14px;"
+              class="admin-form-label"
             >
               Role:
             </label>
             <select
               id="role"
               name="role"
-              style="padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background: var(--bg-tertiary); color: var(--text-primary); transition: border-color 0.2s; cursor: pointer;"
-              onFocus$={(e) =>
-                ((e.target as HTMLElement).style.borderColor =
-                  "var(--accent-primary)")
-              }
-              onBlur$={(e) =>
-                ((e.target as HTMLElement).style.borderColor =
-                  "var(--border-color)")
-              }
+              class="admin-form-select"
             >
               <option value="user">User</option>
               <option value="developer">Developer</option>
@@ -284,21 +224,7 @@ export default component$(() => {
 
           <button
             type="submit"
-            style="padding: 12px 28px; background: var(--accent-gradient); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; align-self: flex-start; box-shadow: var(--shadow-sm); transition: all 0.2s;"
-            onMouseOver$={(e) => {
-              const el = e.target as HTMLElement;
-              if (el) {
-                el.style.transform = "translateY(-2px)";
-                el.style.boxShadow = "var(--shadow-accent)";
-              }
-            }}
-            onMouseOut$={(e) => {
-              const el = e.target as HTMLElement;
-              if (el) {
-                el.style.transform = "translateY(0)";
-                el.style.boxShadow = "var(--shadow-sm)";
-              }
-            }}
+            class="admin-submit-btn"
             disabled={createUserAction.isRunning}
           >
             {createUserAction.isRunning ? "Creating..." : "Create User"}
@@ -306,13 +232,13 @@ export default component$(() => {
         </Form>
 
         {createUserAction.value?.success && (
-          <div style="margin-top: 20px; padding: 14px 18px; background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success); color: var(--success); border-radius: 8px; font-weight: 500;">
+          <div class="success-message">
             User created successfully!
           </div>
         )}
 
         {createUserAction.value?.failed && (
-          <div style="margin-top: 20px; padding: 14px 18px; background: rgba(239, 68, 68, 0.1); border: 1px solid var(--error); color: var(--error); border-radius: 8px; font-weight: 500;">
+          <div class="failed-message">
             Error: {createUserAction.value.message}
           </div>
         )}
@@ -320,19 +246,19 @@ export default component$(() => {
 
       {/* Error loading users */}
       {usersSignal.value.error && (
-        <div style="color: var(--error); padding: 14px 18px; background: rgba(239, 68, 68, 0.1); border: 1px solid var(--error); border-radius: 10px; margin-bottom: 24px; font-weight: 500;">
+        <div class="error-message">
           Error: {usersSignal.value.error}
         </div>
       )}
 
       {/* Empty state */}
       {usersSignal.value.users.length === 0 && !usersSignal.value.error && (
-        <div style="padding: 48px 24px; background: var(--bg-secondary); border-radius: 12px; box-shadow: var(--shadow-md); border: 1px solid var(--border-color); text-align: center;">
-          <div style="font-size: 48px; margin-bottom: 16px;">👥</div>
-          <div style="font-size: 18px; color: var(--text-primary); font-weight: 500; margin-bottom: 8px;">
+        <div class="admin-empty-state">
+          <div class="admin-empty-icon">👥</div>
+          <div class="admin-empty-title">
             No users found
           </div>
-          <div style="color: var(--text-secondary);">
+          <div class="admin-empty-subtitle">
             Create your first user above to get started.
           </div>
         </div>
@@ -340,42 +266,42 @@ export default component$(() => {
 
       {/* Users table */}
       {usersSignal.value.users.length > 0 && (
-        <div style="background: var(--bg-secondary); padding: 28px; border-radius: 12px; box-shadow: var(--shadow-md); border: 1px solid var(--border-color);">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-            <h3 style="margin: 0; font-size: 20px; color: var(--text-primary); font-weight: 600;">
+        <div class="users-table-section">
+          <div class="users-table-header">
+            <h3 class="users-table-title">
               All Users
             </h3>
-            <span style="background: var(--accent-gradient); color: white; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;">
+            <span class="users-count-badge">
               {usersSignal.value.users.length}{" "}
               {usersSignal.value.users.length === 1 ? "user" : "users"}
             </span>
           </div>
-          <div style="overflow-x: auto;">
-            <table style="width: 100%; border-collapse: separate; border-spacing: 0;">
+          <div class="users-table-wrapper">
+            <table class="users-table">
               <thead>
-                <tr style="background: var(--bg-tertiary);">
-                  <th style="padding: 14px 16px; text-align: left; color: var(--text-secondary); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--border-color); border-top-left-radius: 8px;">
+                <tr>
+                  <th>
                     ID
                   </th>
-                  <th style="padding: 14px 16px; text-align: left; color: var(--text-secondary); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--border-color);">
+                  <th>
                     Username
                   </th>
-                  <th style="padding: 14px 16px; text-align: left; color: var(--text-secondary); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--border-color);">
+                  <th>
                     Email
                   </th>
-                  <th style="padding: 14px 16px; text-align: left; color: var(--text-secondary); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--border-color);">
+                  <th>
                     First Name
                   </th>
-                  <th style="padding: 14px 16px; text-align: left; color: var(--text-secondary); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--border-color);">
+                  <th>
                     Last Name
                   </th>
-                  <th style="padding: 14px 16px; text-align: left; color: var(--text-secondary); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--border-color);">
+                  <th>
                     Role
                   </th>
-                  <th style="padding: 14px 16px; text-align: left; color: var(--text-secondary); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--border-color);">
+                  <th>
                     Created At
                   </th>
-                  <th style="padding: 14px 16px; text-align: center; color: var(--text-secondary); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--border-color); border-top-right-radius: 8px;">
+                  <th>
                     Actions
                   </th>
                 </tr>
@@ -384,61 +310,37 @@ export default component$(() => {
                 {usersSignal.value.users.map((user) => (
                   <tr
                     key={user.id}
-                    style="border-bottom: 1px solid var(--border-color); transition: background 0.2s;"
-                    onMouseOver$={(e) => {
-                      const el = e.currentTarget as HTMLElement;
-                      if (el) el.style.background = "var(--bg-elevated)";
-                    }}
-                    onMouseOut$={(e) => {
-                      const el = e.currentTarget as HTMLElement;
-                      if (el) el.style.background = "transparent";
-                    }}
                   >
-                    <td style="padding: 16px; font-family: monospace; font-size: 12px; color: var(--text-secondary);">
+                    <td class="user-id">
                       {user.id}
                     </td>
-                    <td style="padding: 16px; color: var(--text-primary); font-weight: 500;">
+                    <td class="user-username">
                       {user.username}
                     </td>
-                    <td style="padding: 16px; color: var(--accent-secondary); font-weight: 500;">
+                    <td class="user-email">
                       {user.email}
                     </td>
-                    <td style="padding: 16px; color: var(--text-secondary);">
+                    <td class="user-name">
                       {user.first_name || "-"}
                     </td>
-                    <td style="padding: 16px; color: var(--text-secondary);">
+                    <td class="user-name">
                       {user.last_name || "-"}
                     </td>
-                    <td style="padding: 16px;">
+                    <td>
                       <span
-                        style={`padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; text-transform: uppercase; ${user.role === "developer" ? "background: rgba(139, 92, 246, 0.1); color: #8b5cf6;" : "background: rgba(59, 130, 246, 0.1); color: #3b82f6;"}`}
+                        class={`user-role-badge ${user.role === "developer" ? 'developer' : 'user'}`}
                       >
                         {user.role}
                       </span>
                     </td>
-                    <td style="padding: 16px; color: var(--text-tertiary); font-size: 13px;">
+                    <td class="user-created-at">
                       {new Date(user.created_at).toLocaleString()}
                     </td>
-                    <td style="padding: 16px;">
-                      <div style="display: flex; gap: 8px; justify-content: center;">
+                    <td>
+                      <div class="user-actions">
                         <button
                           onClick$={() => (editingUser.value = user)}
-                          style="padding: 8px 16px; background: var(--accent-secondary); color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s;"
-                          onMouseOver$={(e) => {
-                            const el = e.target as HTMLElement;
-                            if (el) {
-                              el.style.background =
-                                "var(--accent-secondary-hover)";
-                              el.style.transform = "translateY(-1px)";
-                            }
-                          }}
-                          onMouseOut$={(e) => {
-                            const el = e.target as HTMLElement;
-                            if (el) {
-                              el.style.background = "var(--accent-secondary)";
-                              el.style.transform = "translateY(0)";
-                            }
-                          }}
+                          class="user-edit-btn"
                         >
                           Edit
                         </button>
@@ -446,21 +348,7 @@ export default component$(() => {
                           <input type="hidden" name="id" value={user.id} />
                           <button
                             type="submit"
-                            style="padding: 8px 16px; background: var(--error); color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s;"
-                            onMouseOver$={(e) => {
-                              const el = e.target as HTMLElement;
-                              if (el) {
-                                el.style.background = "#dc2626";
-                                el.style.transform = "translateY(-1px)";
-                              }
-                            }}
-                            onMouseOut$={(e) => {
-                              const el = e.target as HTMLElement;
-                              if (el) {
-                                el.style.background = "var(--error)";
-                                el.style.transform = "translateY(0)";
-                              }
-                            }}
+                            class="user-delete-btn"
                             onClick$={(e) => {
                               if (
                                 !confirm(
@@ -487,29 +375,21 @@ export default component$(() => {
       {/* Edit User Modal */}
       {editingUser.value && (
         <div
-          style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 24px;"
+          class="edit-modal-overlay"
           onClick$={(e) => {
             if (e.target === e.currentTarget) {
               editingUser.value = null;
             }
           }}
         >
-          <div style="background: var(--bg-secondary); padding: 32px; border-radius: 12px; box-shadow: var(--shadow-lg); border: 1px solid var(--border-color); max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-              <h2 style="margin: 0; font-size: 24px; color: var(--text-primary); font-weight: 600;">
+          <div class="edit-modal-content">
+            <div class="edit-modal-header">
+              <h2 class="edit-modal-title">
                 Edit User
               </h2>
               <button
                 onClick$={() => (editingUser.value = null)}
-                style="background: none; border: none; font-size: 24px; color: var(--text-secondary); cursor: pointer; padding: 4px 8px; line-height: 1; transition: color 0.2s;"
-                onMouseOver$={(e) => {
-                  const el = e.target as HTMLElement;
-                  if (el) el.style.color = "var(--text-primary)";
-                }}
-                onMouseOut$={(e) => {
-                  const el = e.target as HTMLElement;
-                  if (el) el.style.color = "var(--text-secondary)";
-                }}
+                class="edit-modal-close"
               >
                 ×
               </button>
@@ -517,14 +397,14 @@ export default component$(() => {
 
             <Form
               action={updateUserAction}
-              style="display: flex; flex-direction: column; gap: 20px;"
+              class="edit-modal-form"
             >
               <input type="hidden" name="id" value={editingUser.value.id} />
 
-              <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div class="admin-form-field">
                 <label
                   for="edit_email"
-                  style="font-weight: 500; color: var(--text-primary); font-size: 14px;"
+                  class="admin-form-label"
                 >
                   Email:
                 </label>
@@ -534,22 +414,14 @@ export default component$(() => {
                   name="email"
                   value={editingUser.value.email}
                   required
-                  style="padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background: var(--bg-tertiary); color: var(--text-primary); transition: border-color 0.2s;"
-                  onFocus$={(e) =>
-                    ((e.target as HTMLElement).style.borderColor =
-                      "var(--accent-primary)")
-                  }
-                  onBlur$={(e) =>
-                    ((e.target as HTMLElement).style.borderColor =
-                      "var(--border-color)")
-                  }
+                  class="admin-form-input"
                 />
               </div>
 
-              <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div class="admin-form-field">
                 <label
                   for="edit_username"
-                  style="font-weight: 500; color: var(--text-primary); font-size: 14px;"
+                  class="admin-form-label"
                 >
                   Username:
                 </label>
@@ -559,23 +431,15 @@ export default component$(() => {
                   name="username"
                   value={editingUser.value.username}
                   required
-                  style="padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background: var(--bg-tertiary); color: var(--text-primary); transition: border-color 0.2s;"
-                  onFocus$={(e) =>
-                    ((e.target as HTMLElement).style.borderColor =
-                      "var(--accent-primary)")
-                  }
-                  onBlur$={(e) =>
-                    ((e.target as HTMLElement).style.borderColor =
-                      "var(--border-color)")
-                  }
+                  class="admin-form-input"
                 />
               </div>
 
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div class="admin-form-field grid">
+                <div class="admin-form-field">
                   <label
                     for="edit_first_name"
-                    style="font-weight: 500; color: var(--text-primary); font-size: 14px;"
+                    class="admin-form-label"
                   >
                     First Name:
                   </label>
@@ -584,22 +448,14 @@ export default component$(() => {
                     id="edit_first_name"
                     name="first_name"
                     value={editingUser.value.first_name}
-                    style="padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background: var(--bg-tertiary); color: var(--text-primary); transition: border-color 0.2s;"
-                    onFocus$={(e) =>
-                      ((e.target as HTMLElement).style.borderColor =
-                        "var(--accent-secondary)")
-                    }
-                    onBlur$={(e) =>
-                      ((e.target as HTMLElement).style.borderColor =
-                        "var(--border-color)")
-                    }
+                    class="admin-form-input secondary"
                   />
                 </div>
 
-                <div style="display: flex; flex-direction: column; gap: 8px;">
+                <div class="admin-form-field">
                   <label
                     for="edit_last_name"
-                    style="font-weight: 500; color: var(--text-primary); font-size: 14px;"
+                    class="admin-form-label"
                   >
                     Last Name:
                   </label>
@@ -608,23 +464,15 @@ export default component$(() => {
                     id="edit_last_name"
                     name="last_name"
                     value={editingUser.value.last_name}
-                    style="padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background: var(--bg-tertiary); color: var(--text-primary); transition: border-color 0.2s;"
-                    onFocus$={(e) =>
-                      ((e.target as HTMLElement).style.borderColor =
-                        "var(--accent-secondary)")
-                    }
-                    onBlur$={(e) =>
-                      ((e.target as HTMLElement).style.borderColor =
-                        "var(--border-color)")
-                    }
+                    class="admin-form-input secondary"
                   />
                 </div>
               </div>
 
-              <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div class="admin-form-field">
                 <label
                   for="edit_role"
-                  style="font-weight: 500; color: var(--text-primary); font-size: 14px;"
+                  class="admin-form-label"
                 >
                   Role:
                 </label>
@@ -632,54 +480,24 @@ export default component$(() => {
                   id="edit_role"
                   name="role"
                   value={editingUser.value.role}
-                  style="padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background: var(--bg-tertiary); color: var(--text-primary); transition: border-color 0.2s; cursor: pointer;"
-                  onFocus$={(e) =>
-                    ((e.target as HTMLElement).style.borderColor =
-                      "var(--accent-primary)")
-                  }
-                  onBlur$={(e) =>
-                    ((e.target as HTMLElement).style.borderColor =
-                      "var(--border-color)")
-                  }
+                  class="admin-form-select"
                 >
                   <option value="user">User</option>
                   <option value="developer">Developer</option>
                 </select>
               </div>
 
-              <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 8px;">
+              <div class="edit-modal-actions">
                 <button
                   type="button"
                   onClick$={() => (editingUser.value = null)}
-                  style="padding: 12px 24px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;"
-                  onMouseOver$={(e) => {
-                    const el = e.target as HTMLElement;
-                    if (el) el.style.background = "var(--bg-elevated)";
-                  }}
-                  onMouseOut$={(e) => {
-                    const el = e.target as HTMLElement;
-                    if (el) el.style.background = "var(--bg-tertiary)";
-                  }}
+                  class="edit-modal-cancel"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  style="padding: 12px 28px; background: var(--accent-gradient); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow-sm); transition: all 0.2s;"
-                  onMouseOver$={(e) => {
-                    const el = e.target as HTMLElement;
-                    if (el) {
-                      el.style.transform = "translateY(-2px)";
-                      el.style.boxShadow = "var(--shadow-accent)";
-                    }
-                  }}
-                  onMouseOut$={(e) => {
-                    const el = e.target as HTMLElement;
-                    if (el) {
-                      el.style.transform = "translateY(0)";
-                      el.style.boxShadow = "var(--shadow-sm)";
-                    }
-                  }}
+                  class="edit-modal-save"
                   disabled={updateUserAction.isRunning}
                   onClick$={() => {
                     if (updateUserAction.value?.success) {
@@ -692,7 +510,7 @@ export default component$(() => {
               </div>
 
               {updateUserAction.value?.failed && (
-                <div style="padding: 14px 18px; background: rgba(239, 68, 68, 0.1); border: 1px solid var(--error); color: var(--error); border-radius: 8px; font-weight: 500;">
+                <div class="failed-message">
                   Error: {updateUserAction.value.message}
                 </div>
               )}

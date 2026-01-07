@@ -223,13 +223,13 @@ export default component$(() => {
   });
 
   return (
-    <div style="max-width: 1400px; margin: 0 auto;">
+    <div class="tasks-container">
       {/* Header */}
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 40px;">
-        <h1 style="margin: 0; font-size: 28px; color: var(--text-primary); font-weight: 600; letter-spacing: -0.5px;">
+      <div class="tasks-header">
+        <h1 class="tasks-title">
           Tasks
         </h1>
-        <span style="font-size: 13px; color: var(--text-tertiary);">
+        <span class="tasks-stats">
           {lists.value.reduce(
             (acc, l) => acc + l.tasks.filter((t) => t.completed).length,
             0,
@@ -240,17 +240,11 @@ export default component$(() => {
 
       {/* Error Message */}
       {error.value && (
-        <div style="background: rgba(239, 68, 68, 0.1); color: var(--error); padding: 12px 16px; border-radius: 8px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; font-size: 14px;">
+        <div class="error-message">
           <span>{error.value}</span>
           <button
             onClick$={() => (error.value = null)}
-            style="padding: 4px 8px; background: transparent; border: none; color: var(--error); cursor: pointer; opacity: 0.7; transition: opacity 0.2s;"
-            onMouseOver$={(e) =>
-              ((e.target as HTMLElement).style.opacity = "1")
-            }
-            onMouseOut$={(e) =>
-              ((e.target as HTMLElement).style.opacity = "0.7")
-            }
+            class="error-close-btn"
           >
             <svg
               width="16"
@@ -267,8 +261,8 @@ export default component$(() => {
       )}
 
       {/* Create New List */}
-      <div style="margin-bottom: 32px;">
-        <div style="display: flex; gap: 12px; align-items: center;">
+      <div class="create-list-section">
+        <div class="create-list-input-group">
           <input
             type="text"
             value={newListName.value}
@@ -281,30 +275,13 @@ export default component$(() => {
               }
             }}
             placeholder="Create a new list..."
-            style="flex: 1; padding: 14px 18px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 15px; background: var(--bg-secondary); color: var(--text-primary); transition: all 0.2s; outline: none;"
-            onFocus$={(e) => {
-              (e.target as HTMLElement).style.borderColor =
-                "var(--text-tertiary)";
-              (e.target as HTMLElement).style.background = "var(--bg-tertiary)";
-            }}
-            onBlur$={(e) => {
-              (e.target as HTMLElement).style.borderColor =
-                "var(--border-color)";
-              (e.target as HTMLElement).style.background =
-                "var(--bg-secondary)";
-            }}
+            class="create-list-input"
             disabled={isLoading.value}
           />
           <button
             onClick$={addList}
             disabled={isLoading.value}
-            style="padding: 14px 24px; background: var(--text-primary); color: var(--bg-primary); border: none; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; opacity: 0.9;"
-            onMouseOver$={(e) =>
-              ((e.target as HTMLElement).style.opacity = "1")
-            }
-            onMouseOut$={(e) =>
-              ((e.target as HTMLElement).style.opacity = "0.9")
-            }
+            class="create-list-btn"
           >
             Add List
           </button>
@@ -313,15 +290,15 @@ export default component$(() => {
 
       {/* Loading State */}
       {isLoading.value && (
-        <div style="padding: 60px 24px; text-align: center; color: var(--text-tertiary);">
-          <div style="font-size: 14px;">Loading...</div>
+        <div class="loading-state">
+          <div>Loading...</div>
         </div>
       )}
 
       {/* Empty State */}
       {!isLoading.value && lists.value.length === 0 && (
-        <div style="padding: 80px 24px; text-align: center;">
-          <div style="width: 48px; height: 48px; margin: 0 auto 20px; border: 2px dashed var(--border-color); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+        <div class="empty-state">
+          <div class="empty-state-icon">
             <svg
               width="24"
               height="24"
@@ -333,10 +310,10 @@ export default component$(() => {
               <path d="M12 5v14M5 12h14" />
             </svg>
           </div>
-          <div style="font-size: 15px; color: var(--text-secondary); margin-bottom: 4px;">
+          <div class="empty-state-title">
             No lists yet
           </div>
-          <div style="font-size: 13px; color: var(--text-tertiary);">
+          <div class="empty-state-subtitle">
             Create your first list to get started
           </div>
         </div>
@@ -344,43 +321,27 @@ export default component$(() => {
 
       {/* Lists Grid */}
       {!isLoading.value && lists.value.length > 0 && (
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px;">
+        <div class="lists-grid">
           {lists.value.map((list, listIndex) => (
             <div
               key={list.id}
               class="task-list-card"
-              style={`background: var(--bg-secondary); border-radius: 16px; display: flex; flex-direction: column; max-height: 500px; border: 1px solid var(--border-color); transition: border-color 0.2s; animation-delay: ${listIndex * 0.1}s;`}
-              onMouseOver$={(e) =>
-                ((e.currentTarget as HTMLElement).style.borderColor =
-                  "var(--border-color-light)")
-              }
-              onMouseOut$={(e) =>
-                ((e.currentTarget as HTMLElement).style.borderColor =
-                  "var(--border-color)")
-              }
+              style={`animation-delay: ${listIndex * 0.1}s;`}
             >
               {/* List Header */}
-              <div style="padding: 20px 20px 16px; display: flex; justify-content: space-between; align-items: flex-start;">
+              <div class="list-header">
                 <div>
-                  <h3 style="margin: 0 0 4px; font-size: 16px; color: var(--text-primary); font-weight: 600;">
+                  <h3 class="list-title">
                     {list.name}
                   </h3>
-                  <span style="font-size: 12px; color: var(--text-tertiary);">
+                  <span class="list-task-count">
                     {list.tasks.filter((t) => t.completed).length}/
                     {list.tasks.length} tasks
                   </span>
                 </div>
                 <button
                   onClick$={() => deleteList(list.id)}
-                  style="padding: 6px; background: transparent; border: none; color: var(--text-tertiary); cursor: pointer; border-radius: 6px; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"
-                  onMouseEnter$={(e) => {
-                    const btn = (e.target as HTMLElement).closest('button') as HTMLElement;
-                    if (btn) { btn.style.color = "var(--error)"; btn.style.background = "rgba(239, 68, 68, 0.1)"; }
-                  }}
-                  onMouseLeave$={(e) => {
-                    const btn = (e.target as HTMLElement).closest('button') as HTMLElement;
-                    if (btn) { btn.style.color = "var(--text-tertiary)"; btn.style.background = "transparent"; }
-                  }}
+                  class="list-delete-btn"
                   title="Delete list"
                 >
                   <svg
@@ -397,8 +358,8 @@ export default component$(() => {
               </div>
 
               {/* Add Task Input */}
-              <div style="padding: 0 20px 16px;">
-                <div style="display: flex; gap: 8px; align-items: center;">
+              <div class="add-task-container">
+                <div class="add-task-input-group">
                   <input
                     type="text"
                     value={newTaskTitles.value[list.id] || ""}
@@ -414,27 +375,11 @@ export default component$(() => {
                       }
                     }}
                     placeholder="Add a task..."
-                    style="flex: 1; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background: var(--bg-tertiary); color: var(--text-primary); transition: all 0.2s; outline: none;"
-                    onFocus$={(e) =>
-                      ((e.target as HTMLElement).style.borderColor =
-                        "var(--text-tertiary)")
-                    }
-                    onBlur$={(e) =>
-                      ((e.target as HTMLElement).style.borderColor =
-                        "var(--border-color)")
-                    }
+                    class="add-task-input"
                   />
                   <button
                     onClick$={() => addTask(list.id)}
-                    style="padding: 10px; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; color: var(--text-secondary);"
-                    onMouseEnter$={(e) => {
-                      const btn = (e.target as HTMLElement).closest('button') as HTMLElement;
-                      if (btn) { btn.style.borderColor = "var(--text-tertiary)"; btn.style.color = "var(--text-primary)"; }
-                    }}
-                    onMouseLeave$={(e) => {
-                      const btn = (e.target as HTMLElement).closest('button') as HTMLElement;
-                      if (btn) { btn.style.borderColor = "var(--border-color)"; btn.style.color = "var(--text-secondary)"; }
-                    }}
+                    class="add-task-btn"
                     title="Add task"
                   >
                     <svg
@@ -452,56 +397,29 @@ export default component$(() => {
               </div>
 
               {/* Tasks List */}
-              <div style="flex: 1; overflow-y: auto; padding: 0 12px 12px;">
+              <div class="tasks-list">
                 {list.tasks.length === 0 ? (
-                  <div style="text-align: center; color: var(--text-tertiary); padding: 24px 12px; font-size: 13px;">
+                  <div class="tasks-list-empty">
                     No tasks yet
                   </div>
                 ) : (
-                  <div style="display: flex; flex-direction: column; gap: 2px;">
+                  <div class="tasks-list-items">
                     {list.tasks.map((task, taskIndex) => (
                       <div
                         key={task.id}
                         class="task-item"
-                        style={`display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; transition: background 0.15s; cursor: pointer; animation-delay: ${taskIndex * 0.05}s;`}
+                        style={`animation-delay: ${taskIndex * 0.05}s;`}
                         onClick$={(e) => {
                           // Don't toggle if clicking on action buttons
                           const target = e.target as HTMLElement;
                           if (target.closest('.task-action-btn')) return;
                           toggleTask(list.id, task.id);
                         }}
-                        onMouseEnter$={(e) => {
-                          const target = e.target as HTMLElement;
-                          const taskItem = target.closest('.task-item') as HTMLElement;
-                          if (taskItem) taskItem.style.background = "var(--bg-hover)";
-                        }}
-                        onMouseLeave$={(e) => {
-                          const target = e.target as HTMLElement;
-                          const taskItem = target.closest('.task-item') as HTMLElement;
-                          if (taskItem) taskItem.style.background = "transparent";
-                        }}
                       >
                         {/* Custom Checkbox */}
                         <button
                           onClick$={() => toggleTask(list.id, task.id)}
-                          style={{
-                            width: "20px",
-                            height: "20px",
-                            borderRadius: "4px",
-                            border: task.completed
-                              ? "none"
-                              : "2px solid var(--border-color-light)",
-                            background: task.completed
-                              ? "var(--success)"
-                              : "transparent",
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            transition: "all 0.2s",
-                            flexShrink: "0",
-                            padding: "0",
-                          }}
+                          class={`task-checkbox ${task.completed ? 'completed' : ''}`}
                         >
                           {task.completed && (
                             <svg
@@ -518,27 +436,17 @@ export default component$(() => {
                         </button>
 
                         {/* Task Content */}
-                        <div style="flex: 1; min-width: 0;">
+                        <div class="task-content">
                           <span
-                            style={{
-                              display: "block",
-                              fontSize: "14px",
-                              color: task.completed
-                                ? "var(--text-tertiary)"
-                                : "var(--text-primary)",
-                              textDecoration: task.completed
-                                ? "line-through"
-                                : "none",
-                              transition: "all 0.2s",
-                            }}
+                            class={`task-title ${task.completed ? 'completed' : ''}`}
                           >
                             {task.title}
                           </span>
                           {/* Task metadata */}
                           {(task.due_date || task.is_recurring) && (
-                            <div style="display: flex; gap: 8px; margin-top: 4px; align-items: center;">
+                            <div class="task-metadata">
                               {task.due_date && (
-                                <span style="font-size: 11px; color: var(--text-tertiary); display: flex; align-items: center; gap: 4px;">
+                                <span class="task-due-date">
                                   <svg
                                     width="10"
                                     height="10"
@@ -563,7 +471,7 @@ export default component$(() => {
                                 </span>
                               )}
                               {task.is_recurring && (
-                                <span style="font-size: 11px; color: var(--accent-secondary); display: flex; align-items: center; gap: 4px;">
+                                <span class="task-recurring">
                                   <svg
                                     width="10"
                                     height="10"
@@ -584,19 +492,10 @@ export default component$(() => {
                           )}
                         </div>
 
-                        {/* 3-dot Menu Button */}
+                        {/* Edit Button */}
                         <button
                           onClick$={() => openEditModal(list.id, task)}
-                          style="width: 32px; height: 32px; padding: 0; background: transparent; border: none; color: var(--text-tertiary); cursor: pointer; border-radius: 6px; transition: all 0.15s; display: flex; align-items: center; justify-content: center;"
-                          onMouseEnter$={(e) => {
-                            const btn = (e.target as HTMLElement).closest('button') as HTMLElement;
-                            if (btn) btn.style.color = "var(--text-primary)";
-                          }}
-                          onMouseLeave$={(e) => {
-                            const btn = (e.target as HTMLElement).closest('button') as HTMLElement;
-                            if (btn) btn.style.color = "var(--text-tertiary)";
-                          }}
-                          class="task-action-btn"
+                          class="task-action-btn edit"
                           title="Edit task"
                         >
                           <svg
@@ -614,16 +513,7 @@ export default component$(() => {
                         {/* Delete Button */}
                         <button
                           onClick$={() => deleteTask(list.id, task.id)}
-                          style="width: 32px; height: 32px; padding: 0; background: transparent; border: none; color: var(--text-tertiary); cursor: pointer; border-radius: 6px; transition: all 0.15s; display: flex; align-items: center; justify-content: center;"
-                          onMouseEnter$={(e) => {
-                            const btn = (e.target as HTMLElement).closest('button') as HTMLElement;
-                            if (btn) btn.style.color = "var(--error)";
-                          }}
-                          onMouseLeave$={(e) => {
-                            const btn = (e.target as HTMLElement).closest('button') as HTMLElement;
-                            if (btn) btn.style.color = "var(--text-tertiary)";
-                          }}
-                          class="task-action-btn"
+                          class="task-action-btn delete"
                           title="Delete task"
                         >
                           <svg
@@ -646,20 +536,12 @@ export default component$(() => {
               {/* Progress Bar */}
               {list.tasks.length > 0 && (() => {
                 const percentage = (list.tasks.filter((t) => t.completed).length / list.tasks.length) * 100;
-                const progressColor = percentage === 100 
-                  ? "var(--success)" 
-                  : "var(--warning)";
                 return (
-                  <div style="padding: 16px 20px; border-top: 1px solid var(--border-color);">
-                    <div style="height: 4px; background: var(--bg-tertiary); border-radius: 2px; overflow: hidden;">
+                  <div class="task-progress-container">
+                    <div class="task-progress-bar">
                       <div
-                        style={{
-                          height: "100%",
-                          width: `${percentage}%`,
-                          background: progressColor,
-                          borderRadius: "2px",
-                          transition: "width 0.3s ease, background 0.3s ease",
-                        }}
+                        class={`task-progress-fill ${percentage === 100 ? 'complete' : 'incomplete'}`}
+                        style={`width: ${percentage}%;`}
                       />
                     </div>
                   </div>
@@ -673,30 +555,20 @@ export default component$(() => {
       {/* Edit Task Modal */}
       {editModal.isOpen && (
         <div
-          style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px);"
+          class="modal-overlay"
           onClick$={(e) => {
             if (e.target === e.currentTarget) closeEditModal();
           }}
         >
-          <div style="background: var(--bg-secondary); border-radius: 16px; width: 100%; max-width: 480px; margin: 20px; border: 1px solid var(--border-color); overflow: hidden;">
+          <div class="modal-content">
             {/* Modal Header */}
-            <div style="padding: 20px 24px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between;">
-              <h2 style="margin: 0; font-size: 18px; font-weight: 600; color: var(--text-primary);">
+            <div class="modal-header">
+              <h2 class="modal-title">
                 Edit Task
               </h2>
               <button
                 onClick$={closeEditModal}
-                style="padding: 6px; background: transparent; border: none; color: var(--text-tertiary); cursor: pointer; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: all 0.2s;"
-                onMouseOver$={(e) => {
-                  (e.target as HTMLElement).style.color = "var(--text-primary)";
-                  (e.target as HTMLElement).style.background =
-                    "var(--bg-tertiary)";
-                }}
-                onMouseOut$={(e) => {
-                  (e.target as HTMLElement).style.color =
-                    "var(--text-tertiary)";
-                  (e.target as HTMLElement).style.background = "transparent";
-                }}
+                class="modal-close-btn"
               >
                 <svg
                   width="18"
@@ -712,10 +584,10 @@ export default component$(() => {
             </div>
 
             {/* Modal Body */}
-            <div style="padding: 24px;">
+            <div class="modal-body">
               {/* Task Title */}
-              <div style="margin-bottom: 20px;">
-                <label style="display: block; font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 8px;">
+              <div class="modal-field">
+                <label class="modal-label">
                   Task Title
                 </label>
                 <input
@@ -724,21 +596,13 @@ export default component$(() => {
                   onInput$={(e) =>
                     (editModal.title = (e.target as HTMLInputElement).value)
                   }
-                  style="width: 100%; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background: var(--bg-tertiary); color: var(--text-primary); outline: none; transition: border-color 0.2s;"
-                  onFocus$={(e) =>
-                    ((e.target as HTMLElement).style.borderColor =
-                      "var(--text-tertiary)")
-                  }
-                  onBlur$={(e) =>
-                    ((e.target as HTMLElement).style.borderColor =
-                      "var(--border-color)")
-                  }
+                  class="modal-input"
                 />
               </div>
 
               {/* Due Date */}
-              <div style="margin-bottom: 20px;">
-                <label style="display: block; font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 8px;">
+              <div class="modal-field">
+                <label class="modal-label">
                   Due Date
                 </label>
                 <input
@@ -747,48 +611,19 @@ export default component$(() => {
                   onInput$={(e) =>
                     (editModal.dueDate = (e.target as HTMLInputElement).value)
                   }
-                  style="width: 100%; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background: var(--bg-tertiary); color: var(--text-primary); outline: none; transition: border-color 0.2s; color-scheme: dark;"
-                  onFocus$={(e) =>
-                    ((e.target as HTMLElement).style.borderColor =
-                      "var(--text-tertiary)")
-                  }
-                  onBlur$={(e) =>
-                    ((e.target as HTMLElement).style.borderColor =
-                      "var(--border-color)")
-                  }
+                  class="modal-input"
                 />
               </div>
 
               {/* Task Type: One-shot vs Recurring */}
-              <div style="margin-bottom: 20px;">
-                <label style="display: block; font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 12px;">
+              <div class="modal-field">
+                <label class="modal-label">
                   Task Type
                 </label>
-                <div style="display: flex; gap: 12px;">
+                <div class="modal-task-type-group">
                   <button
                     onClick$={() => (editModal.isRecurring = false)}
-                    style={{
-                      flex: "1",
-                      padding: "12px 16px",
-                      border: editModal.isRecurring
-                        ? "1px solid var(--border-color)"
-                        : "1px solid var(--accent-secondary)",
-                      borderRadius: "8px",
-                      background: editModal.isRecurring
-                        ? "transparent"
-                        : "rgba(255, 136, 51, 0.1)",
-                      color: editModal.isRecurring
-                        ? "var(--text-secondary)"
-                        : "var(--accent-secondary)",
-                      cursor: "pointer",
-                      fontSize: "14px",
-                      fontWeight: "500",
-                      transition: "all 0.2s",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "8px",
-                    }}
+                    class={`modal-task-type-btn ${!editModal.isRecurring ? 'active' : ''}`}
                   >
                     <svg
                       width="16"
@@ -805,28 +640,7 @@ export default component$(() => {
                   </button>
                   <button
                     onClick$={() => (editModal.isRecurring = true)}
-                    style={{
-                      flex: "1",
-                      padding: "12px 16px",
-                      border: !editModal.isRecurring
-                        ? "1px solid var(--border-color)"
-                        : "1px solid var(--accent-secondary)",
-                      borderRadius: "8px",
-                      background: !editModal.isRecurring
-                        ? "transparent"
-                        : "rgba(255, 136, 51, 0.1)",
-                      color: !editModal.isRecurring
-                        ? "var(--text-secondary)"
-                        : "var(--accent-secondary)",
-                      cursor: "pointer",
-                      fontSize: "14px",
-                      fontWeight: "500",
-                      transition: "all 0.2s",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "8px",
-                    }}
+                    class={`modal-task-type-btn ${editModal.isRecurring ? 'active' : ''}`}
                   >
                     <svg
                       width="16"
@@ -846,36 +660,16 @@ export default component$(() => {
 
               {/* Recurring Days */}
               {editModal.isRecurring && (
-                <div style="margin-bottom: 20px;">
-                  <label style="display: block; font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 12px;">
+                <div class="modal-field">
+                  <label class="modal-label">
                     Repeat on
                   </label>
-                  <div style="display: flex; gap: 8px;">
+                  <div class="modal-recurring-days">
                     {DAYS_OF_WEEK.map((day, index) => (
                       <button
                         key={day}
                         onClick$={() => toggleRecurringDay(index)}
-                        style={{
-                          width: "44px",
-                          height: "44px",
-                          borderRadius: "8px",
-                          border: editModal.recurringDays[index]
-                            ? "1px solid var(--success)"
-                            : "1px solid var(--border-color)",
-                          background: editModal.recurringDays[index]
-                            ? "rgba(16, 185, 129, 0.15)"
-                            : "transparent",
-                          color: editModal.recurringDays[index]
-                            ? "var(--success)"
-                            : "var(--text-tertiary)",
-                          cursor: "pointer",
-                          fontSize: "12px",
-                          fontWeight: "500",
-                          transition: "all 0.2s",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
+                        class={`modal-day-btn ${editModal.recurringDays[index] ? 'selected' : ''}`}
                       >
                         {day}
                       </button>
@@ -886,33 +680,16 @@ export default component$(() => {
             </div>
 
             {/* Modal Footer */}
-            <div style="padding: 16px 24px; border-top: 1px solid var(--border-color); display: flex; gap: 12px; justify-content: flex-end;">
+            <div class="modal-footer">
               <button
                 onClick$={closeEditModal}
-                style="padding: 10px 20px; border: 1px solid var(--border-color); border-radius: 8px; background: transparent; color: var(--text-secondary); cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s;"
-                onMouseOver$={(e) => {
-                  (e.target as HTMLElement).style.borderColor =
-                    "var(--text-tertiary)";
-                  (e.target as HTMLElement).style.color = "var(--text-primary)";
-                }}
-                onMouseOut$={(e) => {
-                  (e.target as HTMLElement).style.borderColor =
-                    "var(--border-color)";
-                  (e.target as HTMLElement).style.color =
-                    "var(--text-secondary)";
-                }}
+                class="modal-cancel-btn"
               >
                 Cancel
               </button>
               <button
                 onClick$={saveTaskEdits}
-                style="padding: 10px 24px; border: none; border-radius: 8px; background: var(--text-primary); color: var(--bg-primary); cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s; opacity: 0.9;"
-                onMouseOver$={(e) =>
-                  ((e.target as HTMLElement).style.opacity = "1")
-                }
-                onMouseOut$={(e) =>
-                  ((e.target as HTMLElement).style.opacity = "0.9")
-                }
+                class="modal-save-btn"
               >
                 Save Changes
               </button>
@@ -920,12 +697,6 @@ export default component$(() => {
           </div>
         </div>
       )}
-
-      {/* Inline styles for hover effects */}
-      <style>{`
-        .task-action-btn { opacity: 0 !important; }
-        .task-item:hover .task-action-btn { opacity: 1 !important; }
-      `}</style>
     </div>
   );
 });

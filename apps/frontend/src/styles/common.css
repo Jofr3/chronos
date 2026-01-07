@@ -1,0 +1,65 @@
+/* Common/Shared Styles */
+
+/* Redirect Page (used by index, logout, admin redirect) */
+.redirect-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-primary);
+}
+
+.redirect-text {
+  color: var(--text-secondary);
+  font-size: 16px;
+}
+
+/* Error Message Component */
+.error-message {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--error);
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
+.error-close-btn {
+  padding: 4px 8px;
+  background: transparent;
+  border: none;
+  color: var(--error);
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.error-close-btn:hover {
+  opacity: 1;
+}
+
+/* Success Message */
+.success-message {
+  margin-top: 20px;
+  padding: 14px 18px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid var(--success);
+  color: var(--success);
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+/* Failed Message */
+.failed-message {
+  margin-top: 24px;
+  padding: 14px 18px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid var(--error);
+  color: var(--error);
+  border-radius: 10px;
+  text-align: center;
+  font-weight: 500;
+}

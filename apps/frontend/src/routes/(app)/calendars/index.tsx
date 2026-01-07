@@ -25,7 +25,7 @@ export default component$(() => {
   const loadEvents = $(async () => {
     try {
       const events = await getEvents();
-      
+
       // Convert events to FullCalendar format
       const calendarEvents = events.map((event: Event) => ({
         id: event.id,
@@ -92,7 +92,7 @@ export default component$(() => {
       }
     } catch (error) {
       console.error("Schedule error:", error);
-      scheduleMessage.value = error instanceof Error 
+      scheduleMessage.value = error instanceof Error
         ? `Error: ${error.message}`
         : "An error occurred while scheduling tasks";
     } finally {
@@ -143,27 +143,16 @@ export default component$(() => {
   });
 
   return (
-    <div style="max-width: 1400px; margin: 0 auto;">
+    <div class="calendar-container">
       {/* Header */}
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 40px;">
-        <h1 style="margin: 0; font-size: 28px; color: var(--text-primary); font-weight: 600; letter-spacing: -0.5px;">
+      <div class="calendar-header">
+        <h1 class="calendar-title">
           Calendar
         </h1>
         <button
           onClick$={handleAISchedule}
           disabled={isScheduling.value}
-          style={{
-            padding: "12px 24px",
-            background: "var(--accent-primary)",
-            color: "white",
-            border: "none",
-            borderRadius: "8px",
-            fontSize: "14px",
-            fontWeight: "500",
-            cursor: isScheduling.value ? "not-allowed" : "pointer",
-            opacity: isScheduling.value ? "0.6" : "1",
-            transition: "all 0.2s",
-          }}
+          class="calendar-ai-schedule-btn"
         >
           {isScheduling.value ? "Scheduling..." : "🤖 AI Schedule Tasks"}
         </button>
@@ -172,163 +161,18 @@ export default component$(() => {
       {/* Schedule Message */}
       {scheduleMessage.value && (
         <div
-          style={{
-            padding: "12px 16px",
-            marginBottom: "20px",
-            background: scheduleMessage.value.includes("success")
-              ? "rgba(34, 197, 94, 0.1)"
-              : "rgba(239, 68, 68, 0.1)",
-            color: scheduleMessage.value.includes("success")
-              ? "rgb(34, 197, 94)"
-              : "rgb(239, 68, 68)",
-            borderRadius: "8px",
-            border: `1px solid ${
-              scheduleMessage.value.includes("success")
-                ? "rgba(34, 197, 94, 0.3)"
-                : "rgba(239, 68, 68, 0.3)"
-            }`,
-          }}
+          class={`calendar-schedule-message ${
+            scheduleMessage.value.includes("success") ? "success" : "error"
+          }`}
         >
           {scheduleMessage.value}
         </div>
       )}
 
       {/* Calendar Container */}
-      <div
-        style="background: var(--bg-secondary); border-radius: 16px; padding: 24px; border: 1px solid var(--border-color);"
-      >
+      <div class="calendar-wrapper">
         <div ref={calendarRef} id="calendar" />
       </div>
-
-      {/* FullCalendar Custom Styles */}
-      <style>{`
-        /* FullCalendar Theme Overrides */
-        .fc {
-          --fc-border-color: var(--border-color);
-          --fc-button-bg-color: var(--bg-tertiary);
-          --fc-button-border-color: var(--border-color);
-          --fc-button-text-color: var(--text-primary);
-          --fc-button-hover-bg-color: var(--bg-elevated);
-          --fc-button-hover-border-color: var(--border-color-light);
-          --fc-button-active-bg-color: var(--accent-primary);
-          --fc-button-active-border-color: var(--accent-primary);
-          --fc-page-bg-color: var(--bg-secondary);
-          --fc-neutral-bg-color: var(--bg-tertiary);
-          --fc-list-event-hover-bg-color: var(--bg-elevated);
-          --fc-today-bg-color: rgba(139, 92, 246, 0.1);
-          --fc-event-bg-color: var(--accent-primary);
-          --fc-event-border-color: var(--accent-primary);
-          --fc-event-text-color: white;
-          font-family: inherit;
-        }
-
-        .fc .fc-toolbar-title {
-          font-size: 1.25rem;
-          font-weight: 600;
-          color: var(--text-primary);
-        }
-
-        .fc .fc-button {
-          font-weight: 500;
-          font-size: 0.875rem;
-          padding: 8px 16px;
-          border-radius: 8px;
-          transition: all 0.2s;
-        }
-
-        .fc .fc-button:focus {
-          box-shadow: none;
-        }
-
-        .fc .fc-button-primary:not(:disabled).fc-button-active,
-        .fc .fc-button-primary:not(:disabled):active {
-          background-color: var(--accent-primary);
-          border-color: var(--accent-primary);
-        }
-
-        .fc .fc-col-header-cell-cushion {
-          color: var(--text-secondary);
-          font-weight: 500;
-          padding: 12px 4px;
-        }
-
-        .fc .fc-daygrid-day-number {
-          color: var(--text-secondary);
-          font-size: 0.875rem;
-          padding: 8px;
-        }
-
-        .fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
-          color: var(--accent-primary);
-          font-weight: 600;
-        }
-
-        .fc .fc-daygrid-day-top {
-          flex-direction: row;
-        }
-
-        .fc .fc-daygrid-day-frame {
-          min-height: 100px;
-        }
-
-        .fc .fc-event {
-          border-radius: 4px;
-          font-size: 0.8125rem;
-          padding: 2px 6px;
-          cursor: pointer;
-        }
-
-        .fc .fc-daygrid-event {
-          margin: 2px 4px;
-        }
-
-        .fc .fc-timegrid-slot {
-          height: 48px;
-        }
-
-        .fc .fc-timegrid-slot-label-cushion {
-          color: var(--text-tertiary);
-          font-size: 0.75rem;
-        }
-
-        .fc .fc-scrollgrid {
-          border-radius: 8px;
-          overflow: hidden;
-        }
-
-        .fc .fc-scrollgrid-section > td {
-          border: none;
-        }
-
-        .fc th {
-          border-color: var(--border-color);
-        }
-
-        .fc td {
-          border-color: var(--border-color);
-        }
-
-        .fc .fc-highlight {
-          background: rgba(139, 92, 246, 0.15);
-        }
-
-        .fc .fc-daygrid-more-link {
-          color: var(--accent-primary);
-          font-weight: 500;
-        }
-
-        .fc .fc-popover {
-          background: var(--bg-elevated);
-          border-color: var(--border-color);
-          border-radius: 8px;
-          box-shadow: var(--shadow-lg);
-        }
-
-        .fc .fc-popover-header {
-          background: var(--bg-tertiary);
-          color: var(--text-primary);
-        }
-      `}</style>
     </div>
   );
 });

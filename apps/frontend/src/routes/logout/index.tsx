@@ -22,8 +22,8 @@ export default component$(() => {
   useLogout();
 
   return (
-    <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg-primary);">
-      <p style="color: var(--text-secondary); font-size: 16px;">
+    <div class="redirect-container">
+      <p class="redirect-text">
         Logging out...
       </p>
     </div>

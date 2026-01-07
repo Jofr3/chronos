@@ -95,33 +95,25 @@ export default component$(() => {
   });
 
   return (
-    <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg-primary); position: relative; overflow: hidden; padding: 24px;">
+    <div class="auth-container signup">
       {/* Success Popup */}
       {showSuccessPopup.value && (
-        <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; animation: popupOverlayIn 0.3s ease-out;">
-          <div style="background: var(--bg-secondary); padding: 32px 48px; border-radius: 16px; box-shadow: var(--shadow-lg); border: 1px solid var(--border-color); text-align: center; animation: popupIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);">
-            <div style="width: 64px; height: 64px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; animation: checkmarkIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both;">
+        <div class="success-popup-overlay">
+          <div class="success-popup">
+            <div class="success-checkmark">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="20 6 9 17 4 12"></polyline>
               </svg>
             </div>
-            <h2 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 700; color: var(--text-primary);">
+            <h2 class="success-title">
               Account Created!
             </h2>
-            <p style="margin: 0 0 24px 0; color: var(--text-secondary); font-size: 15px;">
+            <p class="success-message">
               Your account has been created successfully.
             </p>
             <button
               onClick$={() => nav("/login")}
-              style="padding: 12px 32px; background: var(--accent-gradient); color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow-sm); transition: all 0.3s;"
-              onMouseOver$={(e) => {
-                (e.target as HTMLElement).style.transform = "translateY(-2px)";
-                (e.target as HTMLElement).style.boxShadow = "var(--shadow-accent)";
-              }}
-              onMouseOut$={(e) => {
-                (e.target as HTMLElement).style.transform = "translateY(0)";
-                (e.target as HTMLElement).style.boxShadow = "var(--shadow-sm)";
-              }}
+              class="success-button"
             >
               Go to Login
             </button>
@@ -130,27 +122,27 @@ export default component$(() => {
       )}
 
       {/* Background decoration */}
-      <div style="position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle at 30% 50%, rgba(255, 68, 68, 0.15) 0%, transparent 50%);"></div>
-      <div style="position: absolute; bottom: -50%; right: -50%; width: 200%; height: 200%; background: radial-gradient(circle at 70% 50%, rgba(255, 136, 51, 0.15) 0%, transparent 50%);"></div>
+      <div class="auth-bg-gradient-left"></div>
+      <div class="auth-bg-gradient-right"></div>
 
-      <div style="width: 100%; max-width: 480px; padding: 48px; background: var(--bg-secondary); border-radius: 16px; box-shadow: var(--shadow-lg); border: 1px solid var(--border-color); position: relative; z-index: 1;">
-        <div style="text-align: center; margin-bottom: 36px;">
-          <h1 style="margin: 0 0 8px 0; font-size: 32px; font-weight: 700; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+      <div class="auth-card signup">
+        <div class="auth-header">
+          <h1 class="auth-title">
             Join Chronos
           </h1>
-          <p style="margin: 0; color: var(--text-secondary); font-size: 15px;">
+          <p class="auth-subtitle">
             Create your account to get started
           </p>
         </div>
 
         <Form
           action={signupAction}
-          style="display: flex; flex-direction: column; gap: 20px;"
+          class="auth-form signup"
         >
-          <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div class="auth-field">
             <label
               for="email"
-              style="font-weight: 600; font-size: 14px; color: var(--text-primary);"
+              class="auth-label"
             >
               Email
             </label>
@@ -159,31 +151,20 @@ export default component$(() => {
               id="email"
               name="email"
               required
-              style="padding: 14px 16px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 15px; background: var(--bg-tertiary); color: var(--text-primary); outline: none; transition: all 0.2s;"
-              onFocus$={(e) => {
-                (e.target as HTMLElement).style.borderColor =
-                  "var(--accent-primary)";
-                (e.target as HTMLElement).style.boxShadow =
-                  "0 0 0 3px rgba(255, 68, 68, 0.1)";
-              }}
-              onBlur$={(e) => {
-                (e.target as HTMLElement).style.borderColor =
-                  "var(--border-color)";
-                (e.target as HTMLElement).style.boxShadow = "none";
-              }}
+              class="auth-input"
               placeholder="you@example.com"
             />
             {signupAction.value?.fieldErrors?.email && (
-              <span style="color: var(--error); font-size: 13px; font-weight: 500;">
+              <span class="auth-error">
                 {signupAction.value.fieldErrors.email}
               </span>
             )}
           </div>
 
-          <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div class="auth-field">
             <label
               for="username"
-              style="font-weight: 600; font-size: 14px; color: var(--text-primary);"
+              class="auth-label"
             >
               Username
             </label>
@@ -192,35 +173,24 @@ export default component$(() => {
               id="username"
               name="username"
               required
-              style="padding: 14px 16px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 15px; background: var(--bg-tertiary); color: var(--text-primary); outline: none; transition: all 0.2s;"
-              onFocus$={(e) => {
-                (e.target as HTMLElement).style.borderColor =
-                  "var(--accent-primary)";
-                (e.target as HTMLElement).style.boxShadow =
-                  "0 0 0 3px rgba(255, 68, 68, 0.1)";
-              }}
-              onBlur$={(e) => {
-                (e.target as HTMLElement).style.borderColor =
-                  "var(--border-color)";
-                (e.target as HTMLElement).style.boxShadow = "none";
-              }}
+              class="auth-input"
               placeholder="johndoe"
             />
             {signupAction.value?.fieldErrors?.username && (
-              <span style="color: var(--error); font-size: 13px; font-weight: 500;">
+              <span class="auth-error">
                 {signupAction.value.fieldErrors.username}
               </span>
             )}
           </div>
 
-          <div style="display: flex; gap: 12px;">
-            <div style="display: flex; flex-direction: column; gap: 8px; flex: 1;">
+          <div class="auth-field row">
+            <div>
               <label
                 for="firstName"
-                style="font-weight: 600; font-size: 14px; color: var(--text-primary);"
+                class="auth-label"
               >
                 First Name{" "}
-                <span style="color: var(--text-tertiary); font-weight: 400; font-size: 12px;">
+                <span class="auth-optional-label">
                   (optional)
                 </span>
               </label>
@@ -228,29 +198,18 @@ export default component$(() => {
                 type="text"
                 id="firstName"
                 name="firstName"
-                style="width: 100%; box-sizing: border-box; padding: 14px 16px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 15px; background: var(--bg-tertiary); color: var(--text-primary); outline: none; transition: all 0.2s;"
-                onFocus$={(e) => {
-                  (e.target as HTMLElement).style.borderColor =
-                    "var(--accent-secondary)";
-                  (e.target as HTMLElement).style.boxShadow =
-                    "0 0 0 3px rgba(255, 136, 51, 0.1)";
-                }}
-                onBlur$={(e) => {
-                  (e.target as HTMLElement).style.borderColor =
-                    "var(--border-color)";
-                  (e.target as HTMLElement).style.boxShadow = "none";
-                }}
+                class="auth-input secondary full-width"
                 placeholder="John"
               />
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 8px; flex: 1;">
+            <div>
               <label
                 for="lastName"
-                style="font-weight: 600; font-size: 14px; color: var(--text-primary);"
+                class="auth-label"
               >
                 Last Name{" "}
-                <span style="color: var(--text-tertiary); font-weight: 400; font-size: 12px;">
+                <span class="auth-optional-label">
                   (optional)
                 </span>
               </label>
@@ -258,27 +217,16 @@ export default component$(() => {
                 type="text"
                 id="lastName"
                 name="lastName"
-                style="width: 100%; box-sizing: border-box; padding: 14px 16px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 15px; background: var(--bg-tertiary); color: var(--text-primary); outline: none; transition: all 0.2s;"
-                onFocus$={(e) => {
-                  (e.target as HTMLElement).style.borderColor =
-                    "var(--accent-secondary)";
-                  (e.target as HTMLElement).style.boxShadow =
-                    "0 0 0 3px rgba(255, 136, 51, 0.1)";
-                }}
-                onBlur$={(e) => {
-                  (e.target as HTMLElement).style.borderColor =
-                    "var(--border-color)";
-                  (e.target as HTMLElement).style.boxShadow = "none";
-                }}
+                class="auth-input secondary full-width"
                 placeholder="Doe"
               />
             </div>
           </div>
 
-          <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div class="auth-field">
             <label
               for="password"
-              style="font-weight: 600; font-size: 14px; color: var(--text-primary);"
+              class="auth-label"
             >
               Password
             </label>
@@ -287,31 +235,20 @@ export default component$(() => {
               id="password"
               name="password"
               required
-              style="padding: 14px 16px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 15px; background: var(--bg-tertiary); color: var(--text-primary); outline: none; transition: all 0.2s;"
-              onFocus$={(e) => {
-                (e.target as HTMLElement).style.borderColor =
-                  "var(--accent-primary)";
-                (e.target as HTMLElement).style.boxShadow =
-                  "0 0 0 3px rgba(255, 68, 68, 0.1)";
-              }}
-              onBlur$={(e) => {
-                (e.target as HTMLElement).style.borderColor =
-                  "var(--border-color)";
-                (e.target as HTMLElement).style.boxShadow = "none";
-              }}
+              class="auth-input"
               placeholder="At least 8 characters"
             />
             {signupAction.value?.fieldErrors?.password && (
-              <span style="color: var(--error); font-size: 13px; font-weight: 500;">
+              <span class="auth-error">
                 {signupAction.value.fieldErrors.password}
               </span>
             )}
           </div>
 
-          <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div class="auth-field">
             <label
               for="confirmPassword"
-              style="font-weight: 600; font-size: 14px; color: var(--text-primary);"
+              class="auth-label"
             >
               Confirm Password
             </label>
@@ -320,22 +257,11 @@ export default component$(() => {
               id="confirmPassword"
               name="confirmPassword"
               required
-              style="padding: 14px 16px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 15px; background: var(--bg-tertiary); color: var(--text-primary); outline: none; transition: all 0.2s;"
-              onFocus$={(e) => {
-                (e.target as HTMLElement).style.borderColor =
-                  "var(--accent-primary)";
-                (e.target as HTMLElement).style.boxShadow =
-                  "0 0 0 3px rgba(255, 68, 68, 0.1)";
-              }}
-              onBlur$={(e) => {
-                (e.target as HTMLElement).style.borderColor =
-                  "var(--border-color)";
-                (e.target as HTMLElement).style.boxShadow = "none";
-              }}
+              class="auth-input"
               placeholder="Confirm your password"
             />
             {signupAction.value?.fieldErrors?.confirmPassword && (
-              <span style="color: var(--error); font-size: 13px; font-weight: 500;">
+              <span class="auth-error">
                 {signupAction.value.fieldErrors.confirmPassword}
               </span>
             )}
@@ -343,16 +269,7 @@ export default component$(() => {
 
           <button
             type="submit"
-            style="padding: 14px 24px; background: var(--accent-gradient); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow-sm); transition: all 0.3s; margin-top: 8px;"
-            onMouseOver$={(e) => {
-              (e.target as HTMLElement).style.transform = "translateY(-2px)";
-              (e.target as HTMLElement).style.boxShadow =
-                "var(--shadow-accent)";
-            }}
-            onMouseOut$={(e) => {
-              (e.target as HTMLElement).style.transform = "translateY(0)";
-              (e.target as HTMLElement).style.boxShadow = "var(--shadow-sm)";
-            }}
+            class="auth-submit-btn"
             disabled={signupAction.isRunning}
           >
             {signupAction.isRunning ? "Creating account..." : "Create Account"}
@@ -360,24 +277,16 @@ export default component$(() => {
         </Form>
 
         {signupAction.value?.failed && (
-          <div style="margin-top: 24px; padding: 14px 18px; background: rgba(239, 68, 68, 0.1); border: 1px solid var(--error); color: var(--error); border-radius: 10px; text-align: center; font-weight: 500;">
+          <div class="failed-message">
             {signupAction.value.message}
           </div>
         )}
 
-        <div style="margin-top: 32px; text-align: center; font-size: 14px; color: var(--text-secondary);">
+        <div class="auth-footer">
           Already have an account?{" "}
           <Link
             href="/login"
-            style="color: var(--accent-secondary); text-decoration: none; font-weight: 600; transition: color 0.2s;"
-            onMouseOver$={(e) =>
-              ((e.target as HTMLElement).style.color =
-                "var(--accent-secondary-hover)")
-            }
-            onMouseOut$={(e) =>
-              ((e.target as HTMLElement).style.color =
-                "var(--accent-secondary)")
-            }
+            class="auth-link"
           >
             Sign in
           </Link>
