@@ -135,17 +135,17 @@ bun migrate:dev                      # Run migrations (development)
 
 ## Project Wiki
 
-The project wiki is located at `chronos.wiki/` and contains:
+The project wiki is located at `wiki/` and contains:
 - Detailed codebase explanations
 - Design principles and architectural decisions
 - TODOs and task tracking
 - Feature specifications
-- **Changelog** (`chronos.wiki/changelog/`) - Detailed record of all codebase changes
-- **Codebase docs** (`chronos.wiki/codebase/`) - In-depth code documentation
+- **Changelog** (`wiki/changelog/`) - Detailed record of all codebase changes
+- **Codebase docs** (`wiki/codebase/`) - In-depth code documentation
 
 Always refer to the wiki for in-depth documentation and keep it updated when making significant changes.
 
-**Important**: When making changes to the codebase, always create or update a changelog entry in `chronos.wiki/changelog/` with the format `short_description_YYYY-MM-DD.md` (e.g., `added_button_to_home_page_2025-01-01.md`) documenting what was changed.
+**Important**: When making changes to the codebase, always create or update a changelog entry in `wiki/changelog/` with the format `short_description_YYYY-MM-DD.md` (e.g., `added_button_to_home_page_2025-01-01.md`) documenting what was changed.
 
 ### Custom Commands
 
@@ -158,4 +158,4 @@ Always refer to the wiki for in-depth documentation and keep it updated when mak
 3. **Qwik Resumability**: Qwik components are resumable - avoid heavy client-side initialization
 4. **Workspace Dependencies**: Use `workspace:*` for internal package references
 5. **Type Safety**: Always use `@chronos/types` for shared types between frontend and backend
-6. **Wiki as Context**: For in-depth understanding of the project architecture and codebase, inspect the `chronos.wiki/codebase/` documentation which contains detailed explanations of all modules, routes, services, and patterns used
+6. **Wiki as Context**: For in-depth understanding of the project architecture and codebase, inspect the `wiki/codebase/` documentation which contains detailed explanations of all modules, routes, services, and patterns used

@@ -146,7 +146,7 @@ Three environments: `development`, `preview`, `production`
 
 ## Project Wiki
 
-The `chronos.wiki/` directory contains:
+The `wiki/` directory contains:
 - **changelog/**: Detailed record of all codebase changes (format: `short_description_YYYY-MM-DD.md`)
 - **codebase/**: Consolidated documentation files
   - `backend.md` - Backend architecture, routes, services, database
@@ -154,7 +154,7 @@ The `chronos.wiki/` directory contains:
   - `shared-types.md` - Shared TypeScript types from `@chronos/types`
   - `infrastructure.md` - Deployment, environments, Cloudflare configuration
 
-**IMPORTANT**: When making significant changes to the codebase, create a changelog entry in `chronos.wiki/changelog/` with format: `short_description_YYYY-MM-DD.md`
+**IMPORTANT**: When making significant changes to the codebase, create a changelog entry in `wiki/changelog/` with format: `short_description_YYYY-MM-DD.md`
 
 ## Code Conventions
 
