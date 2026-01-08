@@ -410,15 +410,18 @@ export default component$(() => {
                         class="task-item"
                         style={`animation-delay: ${taskIndex * 0.05}s;`}
                         onClick$={(e) => {
-                          // Don't toggle if clicking on action buttons
+                          // Don't toggle if clicking on action buttons or checkbox
                           const target = e.target as HTMLElement;
-                          if (target.closest('.task-action-btn')) return;
+                          if (target.closest('.task-action-btn, .task-checkbox')) return;
                           toggleTask(list.id, task.id);
                         }}
                       >
                         {/* Custom Checkbox */}
                         <button
-                          onClick$={() => toggleTask(list.id, task.id)}
+                          onClick$={(e) => {
+                            e.stopPropagation();
+                            toggleTask(list.id, task.id);
+                          }}
                           class={`task-checkbox ${task.completed ? 'completed' : ''}`}
                         >
                           {task.completed && (
@@ -494,7 +497,10 @@ export default component$(() => {
 
                         {/* Edit Button */}
                         <button
-                          onClick$={() => openEditModal(list.id, task)}
+                          onClick$={(e) => {
+                            e.stopPropagation();
+                            openEditModal(list.id, task);
+                          }}
                           class="task-action-btn edit"
                           title="Edit task"
                         >
@@ -512,7 +518,10 @@ export default component$(() => {
 
                         {/* Delete Button */}
                         <button
-                          onClick$={() => deleteTask(list.id, task.id)}
+                          onClick$={(e) => {
+                            e.stopPropagation();
+                            deleteTask(list.id, task.id);
+                          }}
                           class="task-action-btn delete"
                           title="Delete task"
                         >
