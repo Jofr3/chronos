@@ -6,7 +6,7 @@ import {
   useStore,
 } from "@builder.io/qwik";
 import type { DocumentHead } from "@builder.io/qwik-city";
-import type { TaskListWithTasks, Task, DayOfWeek } from "@chronos/types";
+import type { TaskListWithTasks, Task, DayOfWeek, TaskPriority } from "@chronos/types";
 import { taskService } from "~/services/task.service";
 
 interface EditModalState {
@@ -14,12 +14,28 @@ interface EditModalState {
   listId: string | null;
   task: Task | null;
   title: string;
+  description: string;
   dueDate: string;
+  priority: TaskPriority;
+  duration: string; // Store as string for input, convert to number on save
   isRecurring: boolean;
   recurringDays: boolean[];
 }
 
 const DAYS_OF_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+// Helper function to format duration from minutes to human-readable string
+const formatDuration = (minutes: number): string => {
+  if (minutes < 60) {
+    return `${minutes}min`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  if (remainingMinutes === 0) {
+    return `${hours}h`;
+  }
+  return `${hours}h ${remainingMinutes}min`;
+};
 
 export default component$(() => {
   const lists = useSignal<TaskListWithTasks[]>([]);
@@ -34,7 +50,10 @@ export default component$(() => {
     listId: null,
     task: null,
     title: "",
+    description: "",
     dueDate: "",
+    priority: "none",
+    duration: "",
     isRecurring: false,
     recurringDays: [false, false, false, false, false, false, false],
   });
@@ -153,7 +172,10 @@ export default component$(() => {
     editModal.listId = listId;
     editModal.task = task;
     editModal.title = task.title;
+    editModal.description = task.description || "";
     editModal.dueDate = task.due_date || "";
+    editModal.priority = task.priority;
+    editModal.duration = task.duration !== null ? task.duration.toString() : "";
     editModal.isRecurring = task.is_recurring;
     // Convert DayOfWeek[] to boolean[]
     const days = [false, false, false, false, false, false, false];
@@ -171,7 +193,10 @@ export default component$(() => {
     editModal.listId = null;
     editModal.task = null;
     editModal.title = "";
+    editModal.description = "";
     editModal.dueDate = "";
+    editModal.priority = "none";
+    editModal.duration = "";
     editModal.isRecurring = false;
     editModal.recurringDays = [false, false, false, false, false, false, false];
   });
@@ -188,9 +213,17 @@ export default component$(() => {
             .filter((d): d is DayOfWeek => d !== null)
         : null;
 
+      // Parse duration
+      const duration = editModal.duration.trim()
+        ? parseInt(editModal.duration, 10)
+        : null;
+
       const updatedTask = await taskService.updateTask(editModal.task.id, {
         title: editModal.title,
+        description: editModal.description || null,
         due_date: editModal.dueDate || null,
+        priority: editModal.priority,
+        duration: duration,
         is_recurring: editModal.isRecurring,
         recurring_days: recurringDays,
       });
@@ -446,8 +479,29 @@ export default component$(() => {
                             {task.title}
                           </span>
                           {/* Task metadata */}
-                          {(task.due_date || task.is_recurring) && (
+                          {(task.due_date || task.is_recurring || task.priority !== "none" || task.duration) && (
                             <div class="task-metadata">
+                              {task.priority !== "none" && (
+                                <span class={`task-priority priority-${task.priority}`}>
+                                  {task.priority}
+                                </span>
+                              )}
+                              {task.duration && (
+                                <span class="task-duration">
+                                  <svg
+                                    width="10"
+                                    height="10"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                  >
+                                    <circle cx="12" cy="12" r="10" />
+                                    <polyline points="12 6 12 12 16 14" />
+                                  </svg>
+                                  {formatDuration(task.duration)}
+                                </span>
+                              )}
                               {task.due_date && (
                                 <span class="task-due-date">
                                   <svg
@@ -609,19 +663,75 @@ export default component$(() => {
                 />
               </div>
 
-              {/* Due Date */}
+              {/* Task Description */}
               <div class="modal-field">
                 <label class="modal-label">
-                  Due Date
+                  Description
+                </label>
+                <textarea
+                  value={editModal.description}
+                  onInput$={(e) =>
+                    (editModal.description = (e.target as HTMLTextAreaElement).value)
+                  }
+                  class="modal-textarea"
+                  placeholder="Add details about this task..."
+                  rows={3}
+                />
+              </div>
+
+              {/* Priority */}
+              <div class="modal-field">
+                <label class="modal-label">
+                  Priority
+                </label>
+                <div class="modal-priority-group">
+                  <button
+                    onClick$={() => (editModal.priority = "high")}
+                    class={`modal-priority-btn priority-high ${editModal.priority === "high" ? 'active' : ''}`}
+                  >
+                    High
+                  </button>
+                  <button
+                    onClick$={() => (editModal.priority = "normal")}
+                    class={`modal-priority-btn priority-normal ${editModal.priority === "normal" ? 'active' : ''}`}
+                  >
+                    Normal
+                  </button>
+                  <button
+                    onClick$={() => (editModal.priority = "low")}
+                    class={`modal-priority-btn priority-low ${editModal.priority === "low" ? 'active' : ''}`}
+                  >
+                    Low
+                  </button>
+                  <button
+                    onClick$={() => (editModal.priority = "none")}
+                    class={`modal-priority-btn priority-none ${editModal.priority === "none" ? 'active' : ''}`}
+                  >
+                    None
+                  </button>
+                </div>
+              </div>
+
+              {/* Duration */}
+              <div class="modal-field">
+                <label class="modal-label">
+                  Duration (minutes)
                 </label>
                 <input
-                  type="date"
-                  value={editModal.dueDate}
+                  type="number"
+                  value={editModal.duration}
                   onInput$={(e) =>
-                    (editModal.dueDate = (e.target as HTMLInputElement).value)
+                    (editModal.duration = (e.target as HTMLInputElement).value)
                   }
                   class="modal-input"
+                  placeholder="e.g., 30, 60, 120"
+                  min="0"
                 />
+                {editModal.duration && parseInt(editModal.duration) > 0 && (
+                  <div style="font-size: 12px; color: var(--text-tertiary); margin-top: 6px;">
+                    {formatDuration(parseInt(editModal.duration))}
+                  </div>
+                )}
               </div>
 
               {/* Task Type: One-shot vs Recurring */}
@@ -667,6 +777,23 @@ export default component$(() => {
                 </div>
               </div>
 
+              {/* Due Date - shown for One-shot tasks */}
+              {!editModal.isRecurring && (
+                <div class="modal-field">
+                  <label class="modal-label">
+                    Due Date
+                  </label>
+                  <input
+                    type="date"
+                    value={editModal.dueDate}
+                    onInput$={(e) =>
+                      (editModal.dueDate = (e.target as HTMLInputElement).value)
+                    }
+                    class="modal-input"
+                  />
+                </div>
+              )}
+
               {/* Recurring Days */}
               {editModal.isRecurring && (
                 <div class="modal-field">
@@ -683,6 +810,37 @@ export default component$(() => {
                         {day}
                       </button>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Final Date - shown for Recurring tasks */}
+              {editModal.isRecurring && (
+                <div class="modal-field">
+                  <label class="modal-label">
+                    Final Date
+                  </label>
+                  <div style="display: flex; gap: 8px; align-items: center;">
+                    <input
+                      type="date"
+                      value={editModal.dueDate}
+                      onInput$={(e) =>
+                        (editModal.dueDate = (e.target as HTMLInputElement).value)
+                      }
+                      class="modal-input"
+                      style="flex: 1;"
+                      placeholder="No end date"
+                    />
+                    <button
+                      onClick$={() => (editModal.dueDate = "")}
+                      class="modal-never-btn"
+                      type="button"
+                    >
+                      Never
+                    </button>
+                  </div>
+                  <div style="font-size: 12px; color: var(--text-tertiary); margin-top: 6px;">
+                    {editModal.dueDate ? "Task will stop recurring on this date" : "Task will repeat indefinitely"}
                   </div>
                 </div>
               )}

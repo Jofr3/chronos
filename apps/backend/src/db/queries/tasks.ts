@@ -1,7 +1,7 @@
 import { eq, desc, asc, and } from "drizzle-orm";
 import type { DrizzleClient } from "../client";
 import { tasks, taskLists } from "../schema";
-import type { Task, TaskList, DayOfWeek } from "@chronos/types";
+import type { Task, TaskList, DayOfWeek, TaskPriority } from "@chronos/types";
 
 // Helper to parse recurring_days JSON string to DayOfWeek array
 function parseRecurringDays(jsonString: string | null): DayOfWeek[] | null {
@@ -19,8 +19,11 @@ function rowToTask(row: typeof tasks.$inferSelect): Task {
     id: row.id,
     list_id: row.list_id,
     title: row.title,
+    description: row.description,
     completed: row.completed,
     due_date: row.due_date,
+    priority: row.priority as TaskPriority,
+    duration: row.duration,
     is_recurring: row.is_recurring,
     recurring_days: parseRecurringDays(row.recurring_days),
     created_at: row.created_at,
@@ -140,8 +143,11 @@ export async function getAllTasksByUserId(db: DrizzleClient, userId: string): Pr
       id: tasks.id,
       list_id: tasks.list_id,
       title: tasks.title,
+      description: tasks.description,
       completed: tasks.completed,
       due_date: tasks.due_date,
+      priority: tasks.priority,
+      duration: tasks.duration,
       is_recurring: tasks.is_recurring,
       recurring_days: tasks.recurring_days,
       created_at: tasks.created_at,
@@ -200,8 +206,11 @@ export async function updateTask(
   taskId: string,
   updates: {
     title?: string;
+    description?: string | null;
     completed?: boolean;
     due_date?: string | null;
+    priority?: TaskPriority;
+    duration?: number | null;
     is_recurring?: boolean;
     recurring_days?: DayOfWeek[] | null;
   }
@@ -212,8 +221,11 @@ export async function updateTask(
   };
 
   if (updates.title !== undefined) updateData.title = updates.title;
+  if (updates.description !== undefined) updateData.description = updates.description;
   if (updates.completed !== undefined) updateData.completed = updates.completed;
   if (updates.due_date !== undefined) updateData.due_date = updates.due_date;
+  if (updates.priority !== undefined) updateData.priority = updates.priority;
+  if (updates.duration !== undefined) updateData.duration = updates.duration;
   if (updates.is_recurring !== undefined) updateData.is_recurring = updates.is_recurring;
   if (updates.recurring_days !== undefined) {
     updateData.recurring_days = updates.recurring_days ? JSON.stringify(updates.recurring_days) : null;

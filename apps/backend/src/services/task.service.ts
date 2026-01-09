@@ -1,5 +1,5 @@
 import type { DrizzleClient } from "../db/client";
-import type { Task, TaskList, TaskListWithTasks, DayOfWeek } from "@chronos/types";
+import type { Task, TaskList, TaskListWithTasks, DayOfWeek, TaskPriority } from "@chronos/types";
 import * as taskQueries from "../db/queries/tasks";
 
 export class TaskService {
@@ -60,12 +60,15 @@ export class TaskService {
   }
 
   async updateTask(
-    taskId: string, 
-    userId: string, 
-    updates: { 
-      title?: string; 
+    taskId: string,
+    userId: string,
+    updates: {
+      title?: string;
+      description?: string | null;
       completed?: boolean;
       due_date?: string | null;
+      priority?: TaskPriority;
+      duration?: number | null;
       is_recurring?: boolean;
       recurring_days?: DayOfWeek[] | null;
     }
