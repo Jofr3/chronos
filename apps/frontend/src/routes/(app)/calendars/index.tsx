@@ -146,9 +146,6 @@ export default component$(() => {
     <div class="calendar-container">
       {/* Header */}
       <div class="calendar-header">
-        <h1 class="calendar-title">
-          Calendar
-        </h1>
         <button
           onClick$={handleAISchedule}
           disabled={isScheduling.value}

@@ -259,9 +259,6 @@ export default component$(() => {
     <div class="tasks-container">
       {/* Header */}
       <div class="tasks-header">
-        <h1 class="tasks-title">
-          Tasks
-        </h1>
         <span class="tasks-stats">
           {lists.value.reduce(
             (acc, l) => acc + l.tasks.filter((t) => t.completed).length,
