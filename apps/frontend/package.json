@@ -31,6 +31,7 @@
     "@builder.io/qwik": "^1.17.2",
     "@builder.io/qwik-city": "^1.17.2",
     "@eslint/js": "latest",
+    "@qwikest/icons": "^0.0.13",
     "@types/node": "20.19.0",
     "eslint": "9.32.0",
     "eslint-plugin-qwik": "^1.17.2",

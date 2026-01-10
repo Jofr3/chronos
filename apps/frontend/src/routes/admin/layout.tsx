@@ -1,7 +1,8 @@
-import { component$, Slot } from "@builder.io/qwik";
-import { routeLoader$, Link } from "@builder.io/qwik-city";
+import { component$, Slot, useSignal } from "@builder.io/qwik";
+import { routeLoader$, Link, useLocation } from "@builder.io/qwik-city";
 import type { AuthUser } from "@chronos/types/auth";
 import { getApiBaseUrl } from "~/config/env";
+import { LuUsers, LuPanelRightClose, LuPanelRightOpen, LuLogOut, LuUser } from "@qwikest/icons/lucide";
 
 // Auth check for developer pages - requires developer role
 export const useAuthCheck = routeLoader$(async ({ redirect, cookie }) => {
@@ -57,20 +58,24 @@ export const useAuthCheck = routeLoader$(async ({ redirect, cookie }) => {
 
 export default component$(() => {
   const authData = useAuthCheck();
+  const isCollapsed = useSignal(false);
+  const showUserPopup = useSignal(false);
+  const location = useLocation();
 
   return (
     <div class="app-layout">
       {/* Sidebar */}
-      <aside class="sidebar">
-        {/* Logo/Brand */}
-        <div class="sidebar-header">
-          <h1 class="sidebar-logo">
-            Chronos
-          </h1>
-          <p class="sidebar-subtitle">
-            TIME MANAGEMENT
-          </p>
-        </div>
+      <aside class={`sidebar ${isCollapsed.value ? 'sidebar-collapsed' : ''}`}>
+        {/* Collapse toggle button */}
+        <button
+          class="sidebar-toggle"
+          onClick$={() => {
+            isCollapsed.value = !isCollapsed.value;
+          }}
+          title={isCollapsed.value ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {isCollapsed.value ? <LuPanelRightOpen size={24} /> : <LuPanelRightClose size={24} />}
+        </button>
 
         {/* Navigation */}
         <nav class="sidebar-nav">
@@ -78,28 +83,53 @@ export default component$(() => {
             <li>
               <Link
                 href="/admin/users"
-                class="sidebar-nav-link"
+                class={`sidebar-nav-link ${location.url.pathname.startsWith('/admin/users') ? 'sidebar-nav-link-active' : ''}`}
               >
-                Users
+                <LuUsers size={20} />
+                {!isCollapsed.value && <span>Users</span>}
               </Link>
             </li>
           </ul>
         </nav>
 
-        {/* User info at bottom */}
-        <div class="sidebar-user-info">
-          <div class="sidebar-user-email">
-            {authData.value.user?.email}
-          </div>
-          <div class="sidebar-user-role">
-            Developer
-          </div>
-          <a
-            href="/logout"
-            class="sidebar-logout-btn"
+        {/* User menu at bottom */}
+        <div class="sidebar-user-menu">
+          <button
+            class="sidebar-user-avatar"
+            onClick$={() => {
+              showUserPopup.value = !showUserPopup.value;
+            }}
+            title="User menu"
           >
-            Logout
-          </a>
+            <LuUser size={20} />
+          </button>
+
+          {/* User popup */}
+          {showUserPopup.value && (
+            <>
+              <div
+                class="user-popup-backdrop"
+                onClick$={() => {
+                  showUserPopup.value = false;
+                }}
+              />
+              <div class="user-popup">
+                <div class="user-popup-email">
+                  {authData.value.user?.email}
+                </div>
+                <div class="user-popup-role">
+                  Developer
+                </div>
+                <a
+                  href="/logout"
+                  class="user-popup-logout-btn"
+                >
+                  <LuLogOut size={18} />
+                  <span>Logout</span>
+                </a>
+              </div>
+            </>
+          )}
         </div>
       </aside>
 
