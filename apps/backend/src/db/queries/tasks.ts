@@ -1,4 +1,4 @@
-import { eq, desc, asc, and } from "drizzle-orm";
+import { eq, desc, asc, and, isNull } from "drizzle-orm";
 import type { DrizzleClient } from "../client";
 import { tasks, taskLists } from "../schema";
 import type { Task, TaskList, DayOfWeek, TaskPriority } from "@chronos/types";
@@ -17,6 +17,7 @@ function parseRecurringDays(jsonString: string | null): DayOfWeek[] | null {
 function rowToTask(row: typeof tasks.$inferSelect): Task {
   return {
     id: row.id,
+    user_id: row.user_id,
     list_id: row.list_id,
     title: row.title,
     description: row.description,
@@ -139,23 +140,19 @@ export async function getTasksByListId(db: DrizzleClient, listId: string): Promi
 
 export async function getAllTasksByUserId(db: DrizzleClient, userId: string): Promise<Task[]> {
   const result = await db
-    .select({
-      id: tasks.id,
-      list_id: tasks.list_id,
-      title: tasks.title,
-      description: tasks.description,
-      completed: tasks.completed,
-      due_date: tasks.due_date,
-      priority: tasks.priority,
-      duration: tasks.duration,
-      is_recurring: tasks.is_recurring,
-      recurring_days: tasks.recurring_days,
-      created_at: tasks.created_at,
-      updated_at: tasks.updated_at,
-    })
+    .select()
     .from(tasks)
-    .innerJoin(taskLists, eq(tasks.list_id, taskLists.id))
-    .where(eq(taskLists.user_id, userId))
+    .where(eq(tasks.user_id, userId))
+    .orderBy(asc(tasks.created_at));
+
+  return result.map(rowToTask);
+}
+
+export async function getTasksWithoutList(db: DrizzleClient, userId: string): Promise<Task[]> {
+  const result = await db
+    .select()
+    .from(tasks)
+    .where(and(eq(tasks.user_id, userId), isNull(tasks.list_id)))
     .orderBy(asc(tasks.created_at));
 
   return result.map(rowToTask);
@@ -176,6 +173,7 @@ export async function getTaskById(db: DrizzleClient, taskId: string): Promise<Ta
 export async function createTask(
   db: DrizzleClient,
   taskId: string,
+  userId: string,
   listId: string,
   title: string
 ): Promise<Task> {
@@ -185,7 +183,37 @@ export async function createTask(
     .insert(tasks)
     .values({
       id: taskId,
+      user_id: userId,
       list_id: listId,
+      title,
+      completed: false,
+      is_recurring: false,
+      created_at: now,
+      updated_at: now,
+    })
+    .returning();
+
+  if (!result || result.length === 0) {
+    throw new Error("Failed to create task");
+  }
+
+  return rowToTask(result[0]);
+}
+
+export async function createTaskWithoutList(
+  db: DrizzleClient,
+  taskId: string,
+  userId: string,
+  title: string
+): Promise<Task> {
+  const now = new Date().toISOString();
+
+  const result = await db
+    .insert(tasks)
+    .values({
+      id: taskId,
+      user_id: userId,
+      list_id: null,
       title,
       completed: false,
       is_recurring: false,
@@ -213,6 +241,7 @@ export async function updateTask(
     duration?: number | null;
     is_recurring?: boolean;
     recurring_days?: DayOfWeek[] | null;
+    list_id?: string | null;
   }
 ): Promise<Task | null> {
   const now = new Date().toISOString();
@@ -230,6 +259,7 @@ export async function updateTask(
   if (updates.recurring_days !== undefined) {
     updateData.recurring_days = updates.recurring_days ? JSON.stringify(updates.recurring_days) : null;
   }
+  if (updates.list_id !== undefined) updateData.list_id = updates.list_id;
 
   const result = await db
     .update(tasks)

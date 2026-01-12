@@ -39,6 +39,7 @@ const formatDuration = (minutes: number): string => {
 
 export default component$(() => {
   const lists = useSignal<TaskListWithTasks[]>([]);
+  const tasksWithoutList = useSignal<Task[]>([]);
   const newListName = useSignal("");
   const newTaskTitles = useSignal<Record<string, string>>({});
   const isLoading = useSignal(true);
@@ -58,13 +59,26 @@ export default component$(() => {
     recurringDays: [false, false, false, false, false, false, false],
   });
 
-  // Load lists on mount
+  // Drag-and-drop state
+  const dragState = useStore({
+    isDragging: false,
+    draggedTaskId: null as string | null,
+    draggedFromListId: null as string | null,
+    dropTargetListId: null as string | null,
+  });
+
+  // Load lists and tasks without list on mount
   // eslint-disable-next-line qwik/no-use-visible-task
   useVisibleTask$(async () => {
     try {
       isLoading.value = true;
       error.value = null;
-      lists.value = await taskService.getAllTaskLists();
+      const [allLists, tasksNoList] = await Promise.all([
+        taskService.getAllTaskLists(),
+        taskService.getTasksWithoutList(),
+      ]);
+      lists.value = allLists;
+      tasksWithoutList.value = tasksNoList;
     } catch (err) {
       error.value = err instanceof Error ? err.message : "Failed to load tasks";
       console.error("Error loading tasks:", err);
@@ -120,7 +134,28 @@ export default component$(() => {
     }
   });
 
-  const toggleTask = $(async (listId: string, taskId: string) => {
+  const toggleTask = $(async (listId: string | null, taskId: string) => {
+    // Handle tasks from "New events" list
+    if (listId === null) {
+      const task = tasksWithoutList.value.find((t) => t.id === taskId);
+      if (task) {
+        try {
+          const updatedTask = await taskService.updateTask(taskId, {
+            completed: !task.completed,
+          });
+          tasksWithoutList.value = tasksWithoutList.value.map((t) =>
+            t.id === taskId ? updatedTask : t,
+          );
+        } catch (err) {
+          error.value =
+            err instanceof Error ? err.message : "Failed to update task";
+          console.error("Error updating task:", err);
+        }
+      }
+      return;
+    }
+
+    // Handle regular list tasks
     const list = lists.value.find((l) => l.id === listId);
     const task = list?.tasks.find((t) => t.id === taskId);
 
@@ -146,9 +181,19 @@ export default component$(() => {
     }
   });
 
-  const deleteTask = $(async (listId: string, taskId: string) => {
+  const deleteTask = $(async (listId: string | null, taskId: string) => {
     try {
       await taskService.deleteTask(taskId);
+
+      // Handle tasks from "New events" list
+      if (listId === null) {
+        tasksWithoutList.value = tasksWithoutList.value.filter(
+          (t) => t.id !== taskId,
+        );
+        return;
+      }
+
+      // Handle regular list tasks
       lists.value = lists.value.map((list) => {
         if (list.id === listId) {
           return { ...list, tasks: list.tasks.filter((t) => t.id !== taskId) };
@@ -167,7 +212,7 @@ export default component$(() => {
   });
 
   // Open edit modal
-  const openEditModal = $((listId: string, task: Task) => {
+  const openEditModal = $((listId: string | null, task: Task) => {
     editModal.isOpen = true;
     editModal.listId = listId;
     editModal.task = task;
@@ -203,7 +248,7 @@ export default component$(() => {
 
   // Save task edits
   const saveTaskEdits = $(async () => {
-    if (!editModal.task || !editModal.listId) return;
+    if (!editModal.task) return;
 
     try {
       // Convert boolean[] to DayOfWeek[]
@@ -228,17 +273,25 @@ export default component$(() => {
         recurring_days: recurringDays,
       });
 
-      lists.value = lists.value.map((l) => {
-        if (l.id === editModal.listId) {
-          return {
-            ...l,
-            tasks: l.tasks.map((t) =>
-              t.id === editModal.task!.id ? updatedTask : t,
-            ),
-          };
-        }
-        return l;
-      });
+      // Handle tasks from "New events" list
+      if (editModal.listId === null) {
+        tasksWithoutList.value = tasksWithoutList.value.map((t) =>
+          t.id === editModal.task!.id ? updatedTask : t,
+        );
+      } else {
+        // Handle regular list tasks
+        lists.value = lists.value.map((l) => {
+          if (l.id === editModal.listId) {
+            return {
+              ...l,
+              tasks: l.tasks.map((t) =>
+                t.id === editModal.task!.id ? updatedTask : t,
+              ),
+            };
+          }
+          return l;
+        });
+      }
 
       closeEditModal();
     } catch (err) {
@@ -255,6 +308,99 @@ export default component$(() => {
     editModal.recurringDays = newDays;
   });
 
+  // Drag-and-drop handlers
+  const handleDragStart = $((taskId: string, listId: string | null, e: DragEvent) => {
+    dragState.isDragging = true;
+    dragState.draggedTaskId = taskId;
+    dragState.draggedFromListId = listId;
+
+    e.dataTransfer!.effectAllowed = 'move';
+    e.dataTransfer!.setData('text/plain', taskId);
+  });
+
+  const handleDragEnd = $(() => {
+    dragState.isDragging = false;
+    dragState.draggedTaskId = null;
+    dragState.draggedFromListId = null;
+    dragState.dropTargetListId = null;
+  });
+
+  const handleDragOver = $((listId: string, e: DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer!.dropEffect = 'move';
+    dragState.dropTargetListId = listId;
+  });
+
+  const handleDragLeave = $(() => {
+    dragState.dropTargetListId = null;
+  });
+
+  const handleDrop = $(async (targetListId: string, e: DragEvent) => {
+    e.preventDefault();
+
+    const taskId = dragState.draggedTaskId;
+    const sourceListId = dragState.draggedFromListId;
+
+    // Reset drag state
+    dragState.isDragging = false;
+    dragState.draggedTaskId = null;
+    dragState.draggedFromListId = null;
+    dragState.dropTargetListId = null;
+
+    // No-op if dropping on same list
+    if (taskId && sourceListId === targetListId) return;
+    if (!taskId) return;
+
+    try {
+      // Find the task
+      const task = sourceListId === null
+        ? tasksWithoutList.value.find(t => t.id === taskId)
+        : lists.value.find(l => l.id === sourceListId)?.tasks.find(t => t.id === taskId);
+
+      if (!task) return;
+
+      // Optimistic UI update: Remove from source
+      if (sourceListId === null) {
+        tasksWithoutList.value = tasksWithoutList.value.filter(t => t.id !== taskId);
+      } else {
+        lists.value = lists.value.map(list => {
+          if (list.id === sourceListId) {
+            return { ...list, tasks: list.tasks.filter(t => t.id !== taskId) };
+          }
+          return list;
+        });
+      }
+
+      // Add to target with updated list_id
+      const updatedTask = { ...task, list_id: targetListId };
+      lists.value = lists.value.map(list => {
+        if (list.id === targetListId) {
+          return { ...list, tasks: [...list.tasks, updatedTask] };
+        }
+        return list;
+      });
+
+      // Make API call
+      await taskService.updateTask(taskId, { list_id: targetListId });
+
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : "Failed to move task";
+      console.error("Error moving task:", err);
+
+      // Revert on error - reload data
+      try {
+        const [allLists, tasksNoList] = await Promise.all([
+          taskService.getAllTaskLists(),
+          taskService.getTasksWithoutList(),
+        ]);
+        lists.value = allLists;
+        tasksWithoutList.value = tasksNoList;
+      } catch (reloadErr) {
+        console.error("Error reloading after failed move:", reloadErr);
+      }
+    }
+  });
+
   return (
     <div class="tasks-container">
       {/* Header */}
@@ -263,8 +409,8 @@ export default component$(() => {
           {lists.value.reduce(
             (acc, l) => acc + l.tasks.filter((t) => t.completed).length,
             0,
-          )}{" "}
-          of {lists.value.reduce((acc, l) => acc + l.tasks.length, 0)} completed
+          ) + tasksWithoutList.value.filter((t) => t.completed).length}{" "}
+          of {lists.value.reduce((acc, l) => acc + l.tasks.length, 0) + tasksWithoutList.value.length} completed
         </span>
       </div>
 
@@ -326,7 +472,7 @@ export default component$(() => {
       )}
 
       {/* Empty State */}
-      {!isLoading.value && lists.value.length === 0 && (
+      {!isLoading.value && lists.value.length === 0 && tasksWithoutList.value.length === 0 && (
         <div class="empty-state">
           <div class="empty-state-icon">
             <svg
@@ -350,13 +496,209 @@ export default component$(() => {
       )}
 
       {/* Lists Grid */}
-      {!isLoading.value && lists.value.length > 0 && (
+      {!isLoading.value && (lists.value.length > 0 || tasksWithoutList.value.length > 0) && (
         <div class="lists-grid">
+          {/* New Events List (hardcoded for calendar tasks) */}
+          {tasksWithoutList.value.length > 0 && (
+            <div
+              key="new-events"
+              class="task-list-card new-events-list"
+              style="animation-delay: 0s;"
+            >
+              {/* List Header */}
+              <div class="list-header">
+                <div>
+                  <h3 class="list-title">
+                    📅 New events
+                  </h3>
+                  <span class="list-task-count">
+                    {tasksWithoutList.value.filter((t) => t.completed).length}/
+                    {tasksWithoutList.value.length} tasks
+                  </span>
+                </div>
+              </div>
+
+              {/* Tasks List */}
+              <div class="tasks-list">
+                <div class="tasks-list-items">
+                  {tasksWithoutList.value.map((task, taskIndex) => (
+                    <div
+                      key={task.id}
+                      class={`task-item ${dragState.isDragging && dragState.draggedTaskId === task.id ? 'dragging' : ''}`}
+                      style={`animation-delay: ${taskIndex * 0.05}s;`}
+                      draggable={true}
+                      onDragStart$={(e) => handleDragStart(task.id, null, e)}
+                      onDragEnd$={handleDragEnd}
+                      onClick$={(e) => {
+                        const target = e.target as HTMLElement;
+                        if (target.closest('.task-action-btn, .task-checkbox')) return;
+                        toggleTask(null, task.id);
+                      }}
+                    >
+                      {/* Custom Checkbox */}
+                      <button
+                        onClick$={(e) => {
+                          e.stopPropagation();
+                          toggleTask(null, task.id);
+                        }}
+                        class={`task-checkbox ${task.completed ? 'completed' : ''}`}
+                      >
+                        {task.completed && (
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="var(--bg-primary)"
+                            stroke-width="3"
+                          >
+                            <path d="M20 6L9 17l-5-5" />
+                          </svg>
+                        )}
+                      </button>
+
+                      {/* Task Content */}
+                      <div class="task-content">
+                        <span
+                          class={`task-title ${task.completed ? 'completed' : ''}`}
+                        >
+                          {task.title}
+                        </span>
+                        {/* Task metadata */}
+                        {(task.due_date || task.is_recurring || task.priority !== "none") && (
+                          <div class="task-metadata">
+                            {task.priority !== "none" && (
+                              <span class={`task-priority priority-${task.priority}`}>
+                                <svg
+                                  width="12"
+                                  height="12"
+                                  viewBox="0 0 24 24"
+                                  fill="currentColor"
+                                  stroke="none"
+                                >
+                                  <path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z" />
+                                </svg>
+                              </span>
+                            )}
+                            {task.due_date && (
+                              <span class="task-due-date">
+                                <svg
+                                  width="10"
+                                  height="10"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  stroke-width="2"
+                                >
+                                  <rect
+                                    x="3"
+                                    y="4"
+                                    width="18"
+                                    height="18"
+                                    rx="2"
+                                    ry="2"
+                                  />
+                                  <line x1="16" y1="2" x2="16" y2="6" />
+                                  <line x1="8" y1="2" x2="8" y2="6" />
+                                  <line x1="3" y1="10" x2="21" y2="10" />
+                                </svg>
+                                {new Date(task.due_date).toLocaleDateString()}
+                              </span>
+                            )}
+                            {task.is_recurring && (
+                              <span class="task-recurring">
+                                <svg
+                                  width="10"
+                                  height="10"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  stroke-width="2"
+                                >
+                                  <path d="M23 4v6h-6M1 20v-6h6" />
+                                  <path d="M3.51 9a9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
+                                </svg>
+                                {task.recurring_days
+                                  ?.map((d) => DAYS_OF_WEEK[d])
+                                  .join(", ")}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Edit Button */}
+                      <button
+                        onClick$={(e) => {
+                          e.stopPropagation();
+                          openEditModal(null, task);
+                        }}
+                        class="task-action-btn edit"
+                        title="Edit task"
+                      >
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
+                          <circle cx="12" cy="5" r="2" />
+                          <circle cx="12" cy="12" r="2" />
+                          <circle cx="12" cy="19" r="2" />
+                        </svg>
+                      </button>
+
+                      {/* Delete Button */}
+                      <button
+                        onClick$={(e) => {
+                          e.stopPropagation();
+                          deleteTask(null, task.id);
+                        }}
+                        class="task-action-btn delete"
+                        title="Delete task"
+                      >
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        >
+                          <path d="M18 6L6 18M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              {tasksWithoutList.value.length > 0 && (() => {
+                const percentage = (tasksWithoutList.value.filter((t) => t.completed).length / tasksWithoutList.value.length) * 100;
+                return (
+                  <div class="task-progress-container">
+                    <div class="task-progress-bar">
+                      <div
+                        class={`task-progress-fill ${percentage === 100 ? 'complete' : 'incomplete'}`}
+                        style={`width: ${percentage}%;`}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* Regular Lists */}
           {lists.value.map((list, listIndex) => (
             <div
               key={list.id}
-              class="task-list-card"
+              class={`task-list-card ${dragState.isDragging && dragState.dropTargetListId === list.id ? 'drop-target' : ''}`}
               style={`animation-delay: ${listIndex * 0.1}s;`}
+              onDragOver$={(e) => handleDragOver(list.id, e)}
+              onDragLeave$={handleDragLeave}
+              onDrop$={(e) => handleDrop(list.id, e)}
             >
               {/* List Header */}
               <div class="list-header">
@@ -437,8 +779,11 @@ export default component$(() => {
                     {list.tasks.map((task, taskIndex) => (
                       <div
                         key={task.id}
-                        class="task-item"
+                        class={`task-item ${dragState.isDragging && dragState.draggedTaskId === task.id ? 'dragging' : ''}`}
                         style={`animation-delay: ${taskIndex * 0.05}s;`}
+                        draggable={true}
+                        onDragStart$={(e) => handleDragStart(task.id, list.id, e)}
+                        onDragEnd$={handleDragEnd}
                         onClick$={(e) => {
                           // Don't toggle if clicking on action buttons or checkbox
                           const target = e.target as HTMLElement;
@@ -476,27 +821,19 @@ export default component$(() => {
                             {task.title}
                           </span>
                           {/* Task metadata */}
-                          {(task.due_date || task.is_recurring || task.priority !== "none" || task.duration) && (
+                          {(task.due_date || task.is_recurring || task.priority !== "none") && (
                             <div class="task-metadata">
                               {task.priority !== "none" && (
                                 <span class={`task-priority priority-${task.priority}`}>
-                                  {task.priority}
-                                </span>
-                              )}
-                              {task.duration && (
-                                <span class="task-duration">
                                   <svg
-                                    width="10"
-                                    height="10"
+                                    width="12"
+                                    height="12"
                                     viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
+                                    fill="currentColor"
+                                    stroke="none"
                                   >
-                                    <circle cx="12" cy="12" r="10" />
-                                    <polyline points="12 6 12 12 16 14" />
+                                    <path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z" />
                                   </svg>
-                                  {formatDuration(task.duration)}
                                 </span>
                               )}
                               {task.due_date && (

@@ -8,7 +8,7 @@ export class TaskService {
   // Task List methods
   async getAllTaskListsWithTasks(userId: string): Promise<TaskListWithTasks[]> {
     const lists = await taskQueries.getAllTaskLists(this.db, userId);
-    
+
     const listsWithTasks = await Promise.all(
       lists.map(async (list) => {
         const tasks = await taskQueries.getTasksByListId(this.db, list.id);
@@ -20,6 +20,10 @@ export class TaskService {
     );
 
     return listsWithTasks;
+  }
+
+  async getTasksWithoutList(userId: string): Promise<Task[]> {
+    return taskQueries.getTasksWithoutList(this.db, userId);
   }
 
   async getTaskList(listId: string, userId: string): Promise<TaskListWithTasks | null> {
@@ -56,7 +60,12 @@ export class TaskService {
     }
 
     const taskId = crypto.randomUUID();
-    return taskQueries.createTask(this.db, taskId, listId, title);
+    return taskQueries.createTask(this.db, taskId, userId, listId, title);
+  }
+
+  async createTaskWithoutList(userId: string, title: string): Promise<Task> {
+    const taskId = crypto.randomUUID();
+    return taskQueries.createTaskWithoutList(this.db, taskId, userId, title);
   }
 
   async updateTask(
@@ -71,16 +80,24 @@ export class TaskService {
       duration?: number | null;
       is_recurring?: boolean;
       recurring_days?: DayOfWeek[] | null;
+      list_id?: string | null;
     }
   ): Promise<Task | null> {
     // Get the task to verify ownership
     const task = await taskQueries.getTaskById(this.db, taskId);
     if (!task) return null;
 
-    // Verify the task's list belongs to the user
-    const list = await taskQueries.getTaskListById(this.db, task.list_id, userId);
-    if (!list) {
+    // Verify the task belongs to the user
+    if (task.user_id !== userId) {
       throw new Error("Access denied");
+    }
+
+    // Verify target list belongs to user if list_id is being changed
+    if (updates.list_id !== undefined && updates.list_id !== null) {
+      const targetList = await taskQueries.getTaskListById(this.db, updates.list_id, userId);
+      if (!targetList) {
+        throw new Error("Target list not found or access denied");
+      }
     }
 
     return taskQueries.updateTask(this.db, taskId, updates);
@@ -91,9 +108,8 @@ export class TaskService {
     const task = await taskQueries.getTaskById(this.db, taskId);
     if (!task) return false;
 
-    // Verify the task's list belongs to the user
-    const list = await taskQueries.getTaskListById(this.db, task.list_id, userId);
-    if (!list) {
+    // Verify the task belongs to the user
+    if (task.user_id !== userId) {
       throw new Error("Access denied");
     }
 

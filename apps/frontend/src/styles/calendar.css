@@ -189,3 +189,37 @@
   background: var(--bg-tertiary);
   color: var(--text-primary);
 }
+
+/* Event Creation Modal */
+.event-datetime-info {
+  display: flex;
+  gap: 16px;
+  padding: 12px 16px;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.event-date-display,
+.event-time-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.event-date-display svg,
+.event-time-display svg {
+  flex-shrink: 0;
+}
+
+.modal-error {
+  padding: 12px 16px;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  font-size: 14px;
+  margin-top: 12px;
+}

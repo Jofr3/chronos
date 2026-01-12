@@ -66,19 +66,44 @@ tasks.get("/lists", async (c) => {
     if (!userId) {
       return c.json({ success: false, error: { message: "Unauthorized" } }, 401);
     }
-    
+
     const db = createDrizzleClient(c.env.DB);
     const taskService = new TaskService(db);
     const lists = await taskService.getAllTaskListsWithTasks(userId);
-    
+
     return c.json({ success: true, data: lists });
   } catch (error) {
     console.error("Error fetching task lists:", error);
     return c.json(
-      { 
-        success: false, 
-        error: { message: error instanceof Error ? error.message : "Failed to fetch task lists" } 
-      }, 
+      {
+        success: false,
+        error: { message: error instanceof Error ? error.message : "Failed to fetch task lists" }
+      },
+      500
+    );
+  }
+});
+
+// Get tasks without a list (for calendar events)
+tasks.get("/tasks/without-list", async (c) => {
+  try {
+    const userId = await getUserIdFromToken(c.req.header("Authorization"), c.env.JWT_SECRET);
+    if (!userId) {
+      return c.json({ success: false, error: { message: "Unauthorized" } }, 401);
+    }
+
+    const db = createDrizzleClient(c.env.DB);
+    const taskService = new TaskService(db);
+    const tasksWithoutList = await taskService.getTasksWithoutList(userId);
+
+    return c.json({ success: true, data: tasksWithoutList });
+  } catch (error) {
+    console.error("Error fetching tasks without list:", error);
+    return c.json(
+      {
+        success: false,
+        error: { message: error instanceof Error ? error.message : "Failed to fetch tasks" }
+      },
       500
     );
   }
@@ -218,26 +243,57 @@ tasks.post("/lists/:listId/tasks", async (c) => {
     if (!userId) {
       return c.json({ success: false, error: { message: "Unauthorized" } }, 401);
     }
-    
+
     const listId = c.req.param("listId");
     const body = await c.req.json<CreateTaskRequest>();
-    
+
     if (!body.title || body.title.trim() === "") {
       return c.json({ success: false, error: { message: "Task title is required" } }, 400);
     }
-    
+
     const db = createDrizzleClient(c.env.DB);
     const taskService = new TaskService(db);
     const task = await taskService.createTask(listId, userId, body.title);
-    
+
     return c.json({ success: true, data: task }, 201);
   } catch (error) {
     console.error("Error creating task:", error);
     return c.json(
-      { 
-        success: false, 
-        error: { message: error instanceof Error ? error.message : "Failed to create task" } 
-      }, 
+      {
+        success: false,
+        error: { message: error instanceof Error ? error.message : "Failed to create task" }
+      },
+      500
+    );
+  }
+});
+
+// Create a new task without a list (list_id will be null)
+tasks.post("/tasks", async (c) => {
+  try {
+    const userId = await getUserIdFromToken(c.req.header("Authorization"), c.env.JWT_SECRET);
+    if (!userId) {
+      return c.json({ success: false, error: { message: "Unauthorized" } }, 401);
+    }
+
+    const body = await c.req.json<CreateTaskRequest>();
+
+    if (!body.title || body.title.trim() === "") {
+      return c.json({ success: false, error: { message: "Task title is required" } }, 400);
+    }
+
+    const db = createDrizzleClient(c.env.DB);
+    const taskService = new TaskService(db);
+    const task = await taskService.createTaskWithoutList(userId, body.title);
+
+    return c.json({ success: true, data: task }, 201);
+  } catch (error) {
+    console.error("Error creating task:", error);
+    return c.json(
+      {
+        success: false,
+        error: { message: error instanceof Error ? error.message : "Failed to create task" }
+      },
       500
     );
   }

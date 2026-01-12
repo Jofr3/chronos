@@ -60,8 +60,10 @@ export const tasks = sqliteTable(
   "tasks",
   {
     id: text("id").primaryKey(),
-    list_id: text("list_id")
+    user_id: text("user_id")
       .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    list_id: text("list_id")
       .references(() => taskLists.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     description: text("description"),
@@ -81,6 +83,7 @@ export const tasks = sqliteTable(
       .default(sql`(datetime('now'))`),
   },
   (table) => ({
+    userIdIdx: index("idx_tasks_user_id").on(table.user_id),
     listIdIdx: index("idx_tasks_list_id").on(table.list_id),
   })
 );

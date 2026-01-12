@@ -57,6 +57,19 @@ class TaskServiceClass {
     return result.data!;
   }
 
+  async getTasksWithoutList(): Promise<Task[]> {
+    const result = await this.request<Task[]>("/api/tasks/tasks/without-list");
+
+    if (!result.success) {
+      const errorResult = result as any as ApiErrorResponse;
+      throw new Error(
+        errorResult.error?.message || "Failed to fetch tasks without list",
+      );
+    }
+
+    return result.data!;
+  }
+
   async getTaskList(listId: string): Promise<TaskListWithTasks> {
     const result = await this.request<TaskListWithTasks>(
       `/api/tasks/lists/${listId}`,
@@ -126,6 +139,24 @@ class TaskServiceClass {
     const body: CreateTaskRequest = { title };
     const result = await this.request<Task>(
       `/api/tasks/lists/${listId}/tasks`,
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      },
+    );
+
+    if (!result.success) {
+      const errorResult = result as any as ApiErrorResponse;
+      throw new Error(errorResult.error?.message || "Failed to create task");
+    }
+
+    return result.data!;
+  }
+
+  async createTaskWithoutList(title: string): Promise<Task> {
+    const body: CreateTaskRequest = { title };
+    const result = await this.request<Task>(
+      `/api/tasks/tasks`,
       {
         method: "POST",
         body: JSON.stringify(body),

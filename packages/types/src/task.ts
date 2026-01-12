@@ -8,7 +8,8 @@ export type TaskPriority = "high" | "normal" | "low" | "none";
 
 export interface Task {
   id: string;
-  list_id: string;
+  user_id: string;
+  list_id: string | null;
   title: string;
   description: string | null;
   completed: boolean;
@@ -55,4 +56,5 @@ export interface UpdateTaskRequest {
   duration?: number | null;
   is_recurring?: boolean;
   recurring_days?: DayOfWeek[] | null;
+  list_id?: string | null;
 }

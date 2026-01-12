@@ -133,6 +133,16 @@
   border-color: var(--border-color-light);
 }
 
+/* New Events List - Special styling */
+.task-list-card.new-events-list {
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  background: linear-gradient(135deg, var(--bg-secondary) 0%, rgba(139, 92, 246, 0.05) 100%);
+}
+
+.task-list-card.new-events-list:hover {
+  border-color: rgba(139, 92, 246, 0.5);
+}
+
 /* List Header */
 .list-header {
   padding: 20px 20px 16px;
@@ -296,26 +306,22 @@
 }
 
 .task-priority {
-  font-size: 10px;
-  font-weight: 600;
-  padding: 2px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
   border-radius: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
 }
 
 .task-priority.priority-high {
-  background: rgba(239, 68, 68, 0.15);
   color: #ef4444;
 }
 
 .task-priority.priority-normal {
-  background: rgba(59, 130, 246, 0.15);
   color: #3b82f6;
 }
 
 .task-priority.priority-low {
-  background: rgba(156, 163, 175, 0.15);
   color: #9ca3af;
 }
 
@@ -673,4 +679,32 @@
 .modal-never-btn:hover {
   border-color: var(--text-tertiary);
   color: var(--text-primary);
+}
+
+/* Drag-and-Drop Styles */
+
+/* Task being dragged - reduce opacity */
+.task-item.dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+/* Drop target list - highlight border */
+.task-list-card.drop-target {
+  border-color: var(--text-primary);
+  border-width: 2px;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+  transition: all 0.2s ease;
+}
+
+/* Cursor states */
+.task-item[draggable="true"] {
+  cursor: grab;
+}
+
+/* Prevent text selection during drag */
+.task-item[draggable="true"] * {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
 }
