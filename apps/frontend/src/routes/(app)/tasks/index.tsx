@@ -59,14 +59,6 @@ export default component$(() => {
     recurringDays: [false, false, false, false, false, false, false],
   });
 
-  // Drag-and-drop state
-  const dragState = useStore({
-    isDragging: false,
-    draggedTaskId: null as string | null,
-    draggedFromListId: null as string | null,
-    dropTargetListId: null as string | null,
-  });
-
   // Load lists and tasks without list on mount
   // eslint-disable-next-line qwik/no-use-visible-task
   useVisibleTask$(async () => {
@@ -308,99 +300,6 @@ export default component$(() => {
     editModal.recurringDays = newDays;
   });
 
-  // Drag-and-drop handlers
-  const handleDragStart = $((taskId: string, listId: string | null, e: DragEvent) => {
-    dragState.isDragging = true;
-    dragState.draggedTaskId = taskId;
-    dragState.draggedFromListId = listId;
-
-    e.dataTransfer!.effectAllowed = 'move';
-    e.dataTransfer!.setData('text/plain', taskId);
-  });
-
-  const handleDragEnd = $(() => {
-    dragState.isDragging = false;
-    dragState.draggedTaskId = null;
-    dragState.draggedFromListId = null;
-    dragState.dropTargetListId = null;
-  });
-
-  const handleDragOver = $((listId: string, e: DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer!.dropEffect = 'move';
-    dragState.dropTargetListId = listId;
-  });
-
-  const handleDragLeave = $(() => {
-    dragState.dropTargetListId = null;
-  });
-
-  const handleDrop = $(async (targetListId: string, e: DragEvent) => {
-    e.preventDefault();
-
-    const taskId = dragState.draggedTaskId;
-    const sourceListId = dragState.draggedFromListId;
-
-    // Reset drag state
-    dragState.isDragging = false;
-    dragState.draggedTaskId = null;
-    dragState.draggedFromListId = null;
-    dragState.dropTargetListId = null;
-
-    // No-op if dropping on same list
-    if (taskId && sourceListId === targetListId) return;
-    if (!taskId) return;
-
-    try {
-      // Find the task
-      const task = sourceListId === null
-        ? tasksWithoutList.value.find(t => t.id === taskId)
-        : lists.value.find(l => l.id === sourceListId)?.tasks.find(t => t.id === taskId);
-
-      if (!task) return;
-
-      // Optimistic UI update: Remove from source
-      if (sourceListId === null) {
-        tasksWithoutList.value = tasksWithoutList.value.filter(t => t.id !== taskId);
-      } else {
-        lists.value = lists.value.map(list => {
-          if (list.id === sourceListId) {
-            return { ...list, tasks: list.tasks.filter(t => t.id !== taskId) };
-          }
-          return list;
-        });
-      }
-
-      // Add to target with updated list_id
-      const updatedTask = { ...task, list_id: targetListId };
-      lists.value = lists.value.map(list => {
-        if (list.id === targetListId) {
-          return { ...list, tasks: [...list.tasks, updatedTask] };
-        }
-        return list;
-      });
-
-      // Make API call
-      await taskService.updateTask(taskId, { list_id: targetListId });
-
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : "Failed to move task";
-      console.error("Error moving task:", err);
-
-      // Revert on error - reload data
-      try {
-        const [allLists, tasksNoList] = await Promise.all([
-          taskService.getAllTaskLists(),
-          taskService.getTasksWithoutList(),
-        ]);
-        lists.value = allLists;
-        tasksWithoutList.value = tasksNoList;
-      } catch (reloadErr) {
-        console.error("Error reloading after failed move:", reloadErr);
-      }
-    }
-  });
-
   return (
     <div class="tasks-container">
       {/* Header */}
@@ -524,11 +423,8 @@ export default component$(() => {
                   {tasksWithoutList.value.map((task, taskIndex) => (
                     <div
                       key={task.id}
-                      class={`task-item ${dragState.isDragging && dragState.draggedTaskId === task.id ? 'dragging' : ''}`}
+                      class="task-item"
                       style={`animation-delay: ${taskIndex * 0.05}s;`}
-                      draggable={true}
-                      onDragStart$={(e) => handleDragStart(task.id, null, e)}
-                      onDragEnd$={handleDragEnd}
                       onClick$={(e) => {
                         const target = e.target as HTMLElement;
                         if (target.closest('.task-action-btn, .task-checkbox')) return;
@@ -694,11 +590,8 @@ export default component$(() => {
           {lists.value.map((list, listIndex) => (
             <div
               key={list.id}
-              class={`task-list-card ${dragState.isDragging && dragState.dropTargetListId === list.id ? 'drop-target' : ''}`}
+              class="task-list-card"
               style={`animation-delay: ${listIndex * 0.1}s;`}
-              onDragOver$={(e) => handleDragOver(list.id, e)}
-              onDragLeave$={handleDragLeave}
-              onDrop$={(e) => handleDrop(list.id, e)}
             >
               {/* List Header */}
               <div class="list-header">
@@ -779,11 +672,8 @@ export default component$(() => {
                     {list.tasks.map((task, taskIndex) => (
                       <div
                         key={task.id}
-                        class={`task-item ${dragState.isDragging && dragState.draggedTaskId === task.id ? 'dragging' : ''}`}
+                        class="task-item"
                         style={`animation-delay: ${taskIndex * 0.05}s;`}
-                        draggable={true}
-                        onDragStart$={(e) => handleDragStart(task.id, list.id, e)}
-                        onDragEnd$={handleDragEnd}
                         onClick$={(e) => {
                           // Don't toggle if clicking on action buttons or checkbox
                           const target = e.target as HTMLElement;
