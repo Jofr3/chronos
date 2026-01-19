@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, gte, lte } from "drizzle-orm";
 import type { DrizzleClient } from "../client";
 import { events } from "../schema";
 import type { Event } from "@chronos/types";
@@ -92,11 +92,19 @@ export async function getUserEvents(
   startDate?: string,
   endDate?: string
 ): Promise<Event[]> {
-  let query = db.select().from(events).where(eq(events.user_id, userId));
+  const conditions = [eq(events.user_id, userId)];
 
-  // Note: For date range filtering, we'd need to add additional conditions
-  // This is a basic implementation
-  const result = await query;
+  if (startDate) {
+    conditions.push(gte(events.date, startDate));
+  }
+  if (endDate) {
+    conditions.push(lte(events.date, endDate));
+  }
+
+  const result = await db
+    .select()
+    .from(events)
+    .where(and(...conditions));
 
   return result.map(rowToEvent);
 }
@@ -112,4 +120,46 @@ export async function deleteEvent(
     .returning();
 
   return result.length > 0;
+}
+
+export async function deleteManyEvents(
+  db: DrizzleClient,
+  eventIds: string[],
+  userId: string
+): Promise<number> {
+  if (eventIds.length === 0) return 0;
+
+  let deletedCount = 0;
+  for (const eventId of eventIds) {
+    const deleted = await deleteEvent(db, eventId, userId);
+    if (deleted) deletedCount++;
+  }
+
+  return deletedCount;
+}
+
+export async function updateEvent(
+  db: DrizzleClient,
+  eventId: string,
+  userId: string,
+  updates: {
+    date?: string;
+    start_time?: string;
+    end_time?: string;
+    title?: string;
+  }
+): Promise<Event | null> {
+  const now = new Date().toISOString();
+
+  const result = await db
+    .update(events)
+    .set({ ...updates, updated_at: now })
+    .where(and(eq(events.id, eventId), eq(events.user_id, userId)))
+    .returning();
+
+  if (!result || result.length === 0) {
+    return null;
+  }
+
+  return rowToEvent(result[0]);
 }

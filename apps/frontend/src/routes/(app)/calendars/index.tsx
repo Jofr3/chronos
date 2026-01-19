@@ -34,6 +34,31 @@ export default component$(() => {
   const isCreatingEvent = useSignal(false);
   const createEventError = useSignal<string | null>(null);
 
+  // Navigation handlers
+  const handlePrev = $(() => {
+    if (calendarInstance.value) {
+      calendarInstance.value.prev();
+    }
+  });
+
+  const handleNext = $(() => {
+    if (calendarInstance.value) {
+      calendarInstance.value.next();
+    }
+  });
+
+  const handleToday = $(() => {
+    if (calendarInstance.value) {
+      calendarInstance.value.today();
+    }
+  });
+
+  const handleChangeView = $((viewName: string) => {
+    if (calendarInstance.value) {
+      calendarInstance.value.changeView(viewName);
+    }
+  });
+
   const loadEvents = $(async () => {
     try {
       const events = await getEvents();
@@ -192,17 +217,16 @@ export default component$(() => {
     const calendar = new Calendar(calendarRef.value, {
       plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
       initialView: "timeGridWeek",
-      headerToolbar: {
-        left: "prev,next today",
-        center: "title",
-        right: "dayGridMonth,timeGridWeek,timeGridDay",
-      },
+      headerToolbar: false,
       editable: true,
       selectable: true,
       selectMirror: true,
       dayMaxEvents: true,
       weekends: true,
-      height: "auto",
+      height: "100%",
+      scrollTime: "04:00:00",
+      slotDuration: "00:10:00",
+      allDaySlot: false,
       events: [],
       // Event handlers
       dateClick: (info) => {
@@ -246,31 +270,73 @@ export default component$(() => {
 
   return (
     <div class="calendar-container">
-      {/* Header */}
-      <div class="calendar-header">
-        <button
-          onClick$={handleAISchedule}
-          disabled={isScheduling.value}
-          class="calendar-ai-schedule-btn"
-        >
-          {isScheduling.value ? "Scheduling..." : "🤖 AI Schedule Tasks"}
-        </button>
-      </div>
-
-      {/* Schedule Message */}
-      {scheduleMessage.value && (
-        <div
-          class={`calendar-schedule-message ${
-            scheduleMessage.value.includes("success") ? "success" : "error"
-          }`}
-        >
-          {scheduleMessage.value}
+      {/* Main Content Area */}
+      <div class="calendar-main">
+        {/* Calendar Wrapper */}
+        <div class="calendar-wrapper">
+          <div ref={calendarRef} id="calendar" />
         </div>
-      )}
 
-      {/* Calendar Container */}
-      <div class="calendar-wrapper">
-        <div ref={calendarRef} id="calendar" />
+        {/* Sidebar */}
+        <div class="calendar-sidebar">
+          {/* Navigation */}
+          <div class="sidebar-section">
+            <div class="sidebar-nav-buttons">
+              <button onClick$={handlePrev} class="sidebar-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M15 18l-6-6 6-6" />
+                </svg>
+                Prev
+              </button>
+              <button onClick$={handleToday} class="sidebar-btn">
+                Today
+              </button>
+              <button onClick$={handleNext} class="sidebar-btn">
+                Next
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* View Options */}
+          <div class="sidebar-section">
+            <div class="sidebar-view-buttons">
+              <button onClick$={() => handleChangeView("dayGridMonth")} class="sidebar-btn">
+                Month
+              </button>
+              <button onClick$={() => handleChangeView("timeGridWeek")} class="sidebar-btn">
+                Week
+              </button>
+              <button onClick$={() => handleChangeView("timeGridDay")} class="sidebar-btn">
+                Day
+              </button>
+            </div>
+          </div>
+
+          {/* AI Schedule */}
+          <div class="sidebar-section">
+            <button
+              onClick$={handleAISchedule}
+              disabled={isScheduling.value}
+              class="sidebar-btn sidebar-ai-btn"
+            >
+              {isScheduling.value ? "Scheduling..." : "Schedule Tasks"}
+            </button>
+
+            {/* Schedule Message */}
+            {scheduleMessage.value && (
+              <div
+                class={`sidebar-message ${
+                  scheduleMessage.value.includes("success") ? "success" : "error"
+                }`}
+              >
+                {scheduleMessage.value}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Create Event Modal */}
