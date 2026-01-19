@@ -43,7 +43,7 @@ export const useAuthCheck = routeLoader$(async ({ redirect, cookie }) => {
 
 export default component$(() => {
   const authData = useAuthCheck();
-  const isCollapsed = useSignal(false);
+  const isCollapsed = useSignal(true);
   const showUserPopup = useSignal(false);
   const location = useLocation();
 

@@ -40,10 +40,11 @@ const formatDuration = (minutes: number): string => {
 export default component$(() => {
   const lists = useSignal<TaskListWithTasks[]>([]);
   const tasksWithoutList = useSignal<Task[]>([]);
-  const newListName = useSignal("");
   const newTaskTitles = useSignal<Record<string, string>>({});
   const isLoading = useSignal(true);
   const error = useSignal<string | null>(null);
+  const isCreatingList = useSignal(false);
+  const newListName = useSignal("");
 
   // Edit modal state
   const editModal = useStore<EditModalState>({
@@ -79,20 +80,29 @@ export default component$(() => {
     }
   });
 
-  const addList = $(async () => {
+  const startCreatingList = $(() => {
+    isCreatingList.value = true;
+    newListName.value = "";
+  });
+
+  const cancelCreatingList = $(() => {
+    isCreatingList.value = false;
+    newListName.value = "";
+  });
+
+  const confirmCreateList = $(async () => {
     if (newListName.value.trim()) {
       try {
-        const newList = await taskService.createTaskList(
-          newListName.value.trim(),
-        );
+        const newList = await taskService.createTaskList(newListName.value.trim());
         lists.value = [...lists.value, { ...newList, tasks: [] }];
-        newListName.value = "";
       } catch (err) {
         error.value =
           err instanceof Error ? err.message : "Failed to create list";
         console.error("Error creating list:", err);
       }
     }
+    isCreatingList.value = false;
+    newListName.value = "";
   });
 
   const deleteList = $(async (listId: string) => {
@@ -302,17 +312,6 @@ export default component$(() => {
 
   return (
     <div class="tasks-container">
-      {/* Header */}
-      <div class="tasks-header">
-        <span class="tasks-stats">
-          {lists.value.reduce(
-            (acc, l) => acc + l.tasks.filter((t) => t.completed).length,
-            0,
-          ) + tasksWithoutList.value.filter((t) => t.completed).length}{" "}
-          of {lists.value.reduce((acc, l) => acc + l.tasks.length, 0) + tasksWithoutList.value.length} completed
-        </span>
-      </div>
-
       {/* Error Message */}
       {error.value && (
         <div class="error-message">
@@ -335,34 +334,6 @@ export default component$(() => {
         </div>
       )}
 
-      {/* Create New List */}
-      <div class="create-list-section">
-        <div class="create-list-input-group">
-          <input
-            type="text"
-            value={newListName.value}
-            onInput$={(e) =>
-              (newListName.value = (e.target as HTMLInputElement).value)
-            }
-            onKeyPress$={(e) => {
-              if (e.key === "Enter") {
-                addList();
-              }
-            }}
-            placeholder="Create a new list..."
-            class="create-list-input"
-            disabled={isLoading.value}
-          />
-          <button
-            onClick$={addList}
-            disabled={isLoading.value}
-            class="create-list-btn"
-          >
-            Add List
-          </button>
-        </div>
-      </div>
-
       {/* Loading State */}
       {isLoading.value && (
         <div class="loading-state">
@@ -370,32 +341,8 @@ export default component$(() => {
         </div>
       )}
 
-      {/* Empty State */}
-      {!isLoading.value && lists.value.length === 0 && tasksWithoutList.value.length === 0 && (
-        <div class="empty-state">
-          <div class="empty-state-icon">
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="var(--text-tertiary)"
-              stroke-width="1.5"
-            >
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-          </div>
-          <div class="empty-state-title">
-            No lists yet
-          </div>
-          <div class="empty-state-subtitle">
-            Create your first list to get started
-          </div>
-        </div>
-      )}
-
       {/* Lists Grid */}
-      {!isLoading.value && (lists.value.length > 0 || tasksWithoutList.value.length > 0) && (
+      {!isLoading.value && (
         <div class="lists-grid">
           {/* New Events List (hardcoded for calendar tasks) */}
           {tasksWithoutList.value.length > 0 && (
@@ -410,10 +357,6 @@ export default component$(() => {
                   <h3 class="list-title">
                     📅 New events
                   </h3>
-                  <span class="list-task-count">
-                    {tasksWithoutList.value.filter((t) => t.completed).length}/
-                    {tasksWithoutList.value.length} tasks
-                  </span>
                 </div>
               </div>
 
@@ -569,20 +512,6 @@ export default component$(() => {
                 </div>
               </div>
 
-              {/* Progress Bar */}
-              {tasksWithoutList.value.length > 0 && (() => {
-                const percentage = (tasksWithoutList.value.filter((t) => t.completed).length / tasksWithoutList.value.length) * 100;
-                return (
-                  <div class="task-progress-container">
-                    <div class="task-progress-bar">
-                      <div
-                        class={`task-progress-fill ${percentage === 100 ? 'complete' : 'incomplete'}`}
-                        style={`width: ${percentage}%;`}
-                      />
-                    </div>
-                  </div>
-                );
-              })()}
             </div>
           )}
 
@@ -599,10 +528,6 @@ export default component$(() => {
                   <h3 class="list-title">
                     {list.name}
                   </h3>
-                  <span class="list-task-count">
-                    {list.tasks.filter((t) => t.completed).length}/
-                    {list.tasks.length} tasks
-                  </span>
                 </div>
                 <button
                   onClick$={() => deleteList(list.id)}
@@ -820,22 +745,57 @@ export default component$(() => {
                 )}
               </div>
 
-              {/* Progress Bar */}
-              {list.tasks.length > 0 && (() => {
-                const percentage = (list.tasks.filter((t) => t.completed).length / list.tasks.length) * 100;
-                return (
-                  <div class="task-progress-container">
-                    <div class="task-progress-bar">
-                      <div
-                        class={`task-progress-fill ${percentage === 100 ? 'complete' : 'incomplete'}`}
-                        style={`width: ${percentage}%;`}
-                      />
-                    </div>
-                  </div>
-                );
-              })()}
             </div>
           ))}
+
+          {/* Add List Button / New List Input */}
+          {isCreatingList.value ? (
+            <div class="task-list-card new-list-card">
+              <div class="list-header">
+                <input
+                  type="text"
+                  value={newListName.value}
+                  onInput$={(e) =>
+                    (newListName.value = (e.target as HTMLInputElement).value)
+                  }
+                  onKeyDown$={(e) => {
+                    if (e.key === "Enter") {
+                      confirmCreateList();
+                    } else if (e.key === "Escape") {
+                      cancelCreatingList();
+                    }
+                  }}
+                  onBlur$={() => {
+                    if (!newListName.value.trim()) {
+                      cancelCreatingList();
+                    }
+                  }}
+                  placeholder="List name..."
+                  class="new-list-input"
+                  autoFocus
+                />
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick$={startCreatingList}
+              class="add-list-card"
+              disabled={isLoading.value}
+              style={`animation-delay: ${(lists.value.length + (tasksWithoutList.value.length > 0 ? 1 : 0)) * 0.1}s;`}
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              <span>Add List</span>
+            </button>
+          )}
         </div>
       )}
 
