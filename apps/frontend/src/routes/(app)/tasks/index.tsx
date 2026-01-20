@@ -24,6 +24,13 @@ interface EditModalState {
 
 const DAYS_OF_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+// Helper function to format recurring days - shows "Every day" if all days selected
+const formatRecurringDays = (days: number[] | null | undefined): string => {
+  if (!days || days.length === 0) return "";
+  if (days.length === 7) return "Every day";
+  return days.map((d) => DAYS_OF_WEEK[d]).join(", ");
+};
+
 // Helper function to format duration from minutes to human-readable string
 const formatDuration = (minutes: number): string => {
   if (minutes < 60) {
@@ -457,9 +464,7 @@ export default component$(() => {
                                   <path d="M23 4v6h-6M1 20v-6h6" />
                                   <path d="M3.51 9a9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
                                 </svg>
-                                {task.recurring_days
-                                  ?.map((d) => DAYS_OF_WEEK[d])
-                                  .join(", ")}
+                                {formatRecurringDays(task.recurring_days)}
                               </span>
                             )}
                           </div>
@@ -689,9 +694,7 @@ export default component$(() => {
                                     <path d="M23 4v6h-6M1 20v-6h6" />
                                     <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
                                   </svg>
-                                  {task.recurring_days
-                                    ?.map((d) => DAYS_OF_WEEK[d])
-                                    .join(", ")}
+                                  {formatRecurringDays(task.recurring_days)}
                                 </span>
                               )}
                             </div>
