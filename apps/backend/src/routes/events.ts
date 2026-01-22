@@ -3,138 +3,92 @@ import type { Env } from "../types/env";
 import { getUserEvents, createEvent, deleteEvent } from "../db/queries/events";
 import type { CreateEventRequest } from "@chronos/types";
 import { createDrizzleClient } from "../db/client";
+import { authMiddleware, getAuthUserId, type ProtectedContext } from "../middleware/auth";
+import {
+  successResponse,
+  validationError,
+  notFoundError,
+  handleError,
+} from "../utils/responses";
 
-const app = new Hono<{ Bindings: Env }>();
+const events = new Hono<{ Bindings: Env; Variables: { userId: string } }>();
 
-// Helper to get user ID from auth token
-async function getUserIdFromToken(authHeader: string | undefined, jwtSecret: string): Promise<string | null> {
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return null;
-  }
-  
-  const token = authHeader.slice(7);
-  
-  try {
-    // Decode JWT token manually (only need payload verification, no DB needed)
-    const parts = token.split(".");
-    if (parts.length !== 3) {
-      return null;
-    }
-
-    const [encodedHeader, encodedPayload, signature] = parts;
-
-    // Verify signature
-    const encoder = new TextEncoder();
-    const key = await crypto.subtle.importKey(
-      "raw",
-      encoder.encode(jwtSecret),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"]
-    );
-
-    const signatureData = await crypto.subtle.sign("HMAC", key, encoder.encode(`${encodedHeader}.${encodedPayload}`));
-    const expectedSignature = btoa(String.fromCharCode(...new Uint8Array(signatureData)))
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
-
-    if (signature !== expectedSignature) {
-      return null;
-    }
-
-    // Decode and parse payload
-    const pad = encodedPayload.length % 4;
-    const paddedPayload = pad ? encodedPayload + "=".repeat(4 - pad) : encodedPayload;
-    const payload = JSON.parse(atob(paddedPayload.replace(/-/g, "+").replace(/_/g, "/")));
-
-    // Check expiration
-    if (payload.exp < Math.floor(Date.now() / 1000)) {
-      return null;
-    }
-
-    return payload.sub; // 'sub' contains the user ID
-  } catch {
-    return null;
-  }
-}
+// Apply auth middleware to all routes
+events.use("/*", authMiddleware);
 
 // Get all events for authenticated user
-app.get("/", async (c) => {
-  const userId = await getUserIdFromToken(c.req.header("Authorization"), c.env.JWT_SECRET);
-  if (!userId) {
-    return c.json({ success: false, error: { message: "Unauthorized" } }, 401);
+events.get("/", async (c: ProtectedContext) => {
+  try {
+    const userId = getAuthUserId(c);
+    const db = createDrizzleClient(c.env.DB);
+
+    // Get optional date range from query params
+    const startDate = c.req.query("startDate");
+    const endDate = c.req.query("endDate");
+
+    const userEvents = await getUserEvents(db, userId, startDate, endDate);
+
+    return successResponse(c, userEvents);
+  } catch (error) {
+    return handleError(c, error, "fetch events");
   }
-
-  const db = createDrizzleClient(c.env.DB);
-  
-  // Get optional date range from query params
-  const startDate = c.req.query("startDate");
-  const endDate = c.req.query("endDate");
-  
-  const events = await getUserEvents(db, userId, startDate, endDate);
-
-  return c.json({
-    success: true,
-    data: events,
-  });
 });
 
 // Create new event
-app.post("/", async (c) => {
-  const userId = await getUserIdFromToken(c.req.header("Authorization"), c.env.JWT_SECRET);
-  if (!userId) {
-    return c.json({ success: false, error: { message: "Unauthorized" } }, 401);
-  }
+events.post("/", async (c: ProtectedContext) => {
+  try {
+    const userId = getAuthUserId(c);
+    const body = await c.req.json<CreateEventRequest>();
 
-  const body = await c.req.json<CreateEventRequest>();
+    if (!body.task_id || !body.date || !body.start_time || !body.end_time) {
+      return validationError(
+        c,
+        "Missing required fields (task_id, date, start_time, end_time)",
+        {
+          task_id: !body.task_id ? "required" : undefined,
+          date: !body.date ? "required" : undefined,
+          start_time: !body.start_time ? "required" : undefined,
+          end_time: !body.end_time ? "required" : undefined,
+        }
+      );
+    }
 
-  if (!body.task_id || !body.date || !body.start_time || !body.end_time) {
-    return c.json(
-      { success: false, error: { message: "Missing required fields (task_id, date, start_time, end_time)" } },
-      400
+    const db = createDrizzleClient(c.env.DB);
+    const eventId = crypto.randomUUID();
+
+    const event = await createEvent(
+      db,
+      eventId,
+      userId,
+      body.task_id,
+      body.date,
+      body.start_time,
+      body.end_time
     );
+
+    return successResponse(c, event, undefined, 201);
+  } catch (error) {
+    return handleError(c, error, "create event");
   }
-
-  const db = createDrizzleClient(c.env.DB);
-  const eventId = crypto.randomUUID();
-
-  const event = await createEvent(
-    db,
-    eventId,
-    userId,
-    body.task_id,
-    body.date,
-    body.start_time,
-    body.end_time
-  );
-
-  return c.json({
-    success: true,
-    data: event,
-  });
 });
 
 // Delete event
-app.delete("/:id", async (c) => {
-  const userId = await getUserIdFromToken(c.req.header("Authorization"), c.env.JWT_SECRET);
-  if (!userId) {
-    return c.json({ success: false, error: { message: "Unauthorized" } }, 401);
+events.delete("/:id", async (c: ProtectedContext) => {
+  try {
+    const userId = getAuthUserId(c);
+    const eventId = c.req.param("id");
+    const db = createDrizzleClient(c.env.DB);
+
+    const deleted = await deleteEvent(db, eventId, userId);
+
+    if (!deleted) {
+      return notFoundError(c, "Event");
+    }
+
+    return successResponse(c, { id: eventId });
+  } catch (error) {
+    return handleError(c, error, "delete event");
   }
-
-  const eventId = c.req.param("id");
-  const db = createDrizzleClient(c.env.DB);
-
-  const deleted = await deleteEvent(db, eventId, userId);
-
-  if (!deleted) {
-    return c.json({ success: false, error: { message: "Event not found" } }, 404);
-  }
-
-  return c.json({
-    success: true,
-    data: { id: eventId },
-  });
 });
 
-export default app;
+export default events;

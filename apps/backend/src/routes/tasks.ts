@@ -3,361 +3,208 @@ import type { Env } from "../types/env";
 import { TaskService } from "../services/task.service";
 import { createDrizzleClient } from "../db/client";
 import type { CreateTaskListRequest, CreateTaskRequest, UpdateTaskRequest, UpdateTaskListRequest } from "@chronos/types";
+import { authMiddleware, getAuthUserId, type ProtectedContext } from "../middleware/auth";
+import {
+  successResponse,
+  validationError,
+  notFoundError,
+  handleError,
+} from "../utils/responses";
 
-const tasks = new Hono<{ Bindings: Env }>();
+const tasks = new Hono<{ Bindings: Env; Variables: { userId: string } }>();
 
-// Helper to get user ID from auth token
-async function getUserIdFromToken(authHeader: string | undefined, jwtSecret: string): Promise<string | null> {
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return null;
-  }
-  
-  const token = authHeader.slice(7);
-  
-  try {
-    // Decode JWT token manually (only need payload verification, no DB needed)
-    const parts = token.split(".");
-    if (parts.length !== 3) {
-      return null;
-    }
-
-    const [encodedHeader, encodedPayload, signature] = parts;
-
-    // Verify signature
-    const encoder = new TextEncoder();
-    const key = await crypto.subtle.importKey(
-      "raw",
-      encoder.encode(jwtSecret),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"]
-    );
-
-    const signatureData = await crypto.subtle.sign("HMAC", key, encoder.encode(`${encodedHeader}.${encodedPayload}`));
-    const expectedSignature = btoa(String.fromCharCode(...new Uint8Array(signatureData)))
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
-
-    if (signature !== expectedSignature) {
-      return null;
-    }
-
-    // Decode and parse payload
-    const pad = encodedPayload.length % 4;
-    const paddedPayload = pad ? encodedPayload + "=".repeat(4 - pad) : encodedPayload;
-    const payload = JSON.parse(atob(paddedPayload.replace(/-/g, "+").replace(/_/g, "/")));
-
-    // Check expiration
-    if (payload.exp < Math.floor(Date.now() / 1000)) {
-      return null;
-    }
-
-    return payload.sub; // 'sub' contains the user ID
-  } catch {
-    return null;
-  }
-}
+// Apply auth middleware to all routes
+tasks.use("/*", authMiddleware);
 
 // Get all task lists with tasks
-tasks.get("/lists", async (c) => {
+tasks.get("/lists", async (c: ProtectedContext) => {
   try {
-    const userId = await getUserIdFromToken(c.req.header("Authorization"), c.env.JWT_SECRET);
-    if (!userId) {
-      return c.json({ success: false, error: { message: "Unauthorized" } }, 401);
-    }
-
+    const userId = getAuthUserId(c);
     const db = createDrizzleClient(c.env.DB);
     const taskService = new TaskService(db);
     const lists = await taskService.getAllTaskListsWithTasks(userId);
 
-    return c.json({ success: true, data: lists });
+    return successResponse(c, lists);
   } catch (error) {
-    console.error("Error fetching task lists:", error);
-    return c.json(
-      {
-        success: false,
-        error: { message: error instanceof Error ? error.message : "Failed to fetch task lists" }
-      },
-      500
-    );
+    return handleError(c, error, "fetch task lists");
   }
 });
 
 // Get tasks without a list (for calendar events)
-tasks.get("/tasks/without-list", async (c) => {
+tasks.get("/tasks/without-list", async (c: ProtectedContext) => {
   try {
-    const userId = await getUserIdFromToken(c.req.header("Authorization"), c.env.JWT_SECRET);
-    if (!userId) {
-      return c.json({ success: false, error: { message: "Unauthorized" } }, 401);
-    }
-
+    const userId = getAuthUserId(c);
     const db = createDrizzleClient(c.env.DB);
     const taskService = new TaskService(db);
     const tasksWithoutList = await taskService.getTasksWithoutList(userId);
 
-    return c.json({ success: true, data: tasksWithoutList });
+    return successResponse(c, tasksWithoutList);
   } catch (error) {
-    console.error("Error fetching tasks without list:", error);
-    return c.json(
-      {
-        success: false,
-        error: { message: error instanceof Error ? error.message : "Failed to fetch tasks" }
-      },
-      500
-    );
+    return handleError(c, error, "fetch tasks");
   }
 });
 
 // Get a single task list with tasks
-tasks.get("/lists/:listId", async (c) => {
+tasks.get("/lists/:listId", async (c: ProtectedContext) => {
   try {
-    const userId = await getUserIdFromToken(c.req.header("Authorization"), c.env.JWT_SECRET);
-    if (!userId) {
-      return c.json({ success: false, error: { message: "Unauthorized" } }, 401);
-    }
-    
+    const userId = getAuthUserId(c);
     const listId = c.req.param("listId");
     const db = createDrizzleClient(c.env.DB);
     const taskService = new TaskService(db);
     const list = await taskService.getTaskList(listId, userId);
-    
+
     if (!list) {
-      return c.json({ success: false, error: { message: "Task list not found" } }, 404);
+      return notFoundError(c, "Task list");
     }
-    
-    return c.json({ success: true, data: list });
+
+    return successResponse(c, list);
   } catch (error) {
-    console.error("Error fetching task list:", error);
-    return c.json(
-      { 
-        success: false, 
-        error: { message: error instanceof Error ? error.message : "Failed to fetch task list" } 
-      }, 
-      500
-    );
+    return handleError(c, error, "fetch task list");
   }
 });
 
 // Create a new task list
-tasks.post("/lists", async (c) => {
+tasks.post("/lists", async (c: ProtectedContext) => {
   try {
-    const userId = await getUserIdFromToken(c.req.header("Authorization"), c.env.JWT_SECRET);
-    if (!userId) {
-      return c.json({ success: false, error: { message: "Unauthorized" } }, 401);
-    }
-    
+    const userId = getAuthUserId(c);
     const body = await c.req.json<CreateTaskListRequest>();
-    
+
     if (!body.name || body.name.trim() === "") {
-      return c.json({ success: false, error: { message: "List name is required" } }, 400);
+      return validationError(c, "List name is required");
     }
-    
+
     const db = createDrizzleClient(c.env.DB);
     const taskService = new TaskService(db);
     const list = await taskService.createTaskList(userId, body.name);
-    
-    return c.json({ success: true, data: list }, 201);
+
+    return successResponse(c, list, undefined, 201);
   } catch (error) {
-    console.error("Error creating task list:", error);
-    return c.json(
-      { 
-        success: false, 
-        error: { message: error instanceof Error ? error.message : "Failed to create task list" } 
-      }, 
-      500
-    );
+    return handleError(c, error, "create task list");
   }
 });
 
 // Update a task list
-tasks.put("/lists/:listId", async (c) => {
+tasks.put("/lists/:listId", async (c: ProtectedContext) => {
   try {
-    const userId = await getUserIdFromToken(c.req.header("Authorization"), c.env.JWT_SECRET);
-    if (!userId) {
-      return c.json({ success: false, error: { message: "Unauthorized" } }, 401);
-    }
-    
+    const userId = getAuthUserId(c);
     const listId = c.req.param("listId");
     const body = await c.req.json<UpdateTaskListRequest>();
-    
+
     if (!body.name || body.name.trim() === "") {
-      return c.json({ success: false, error: { message: "List name is required" } }, 400);
+      return validationError(c, "List name is required");
     }
-    
+
     const db = createDrizzleClient(c.env.DB);
     const taskService = new TaskService(db);
     const list = await taskService.updateTaskList(listId, userId, body.name);
-    
+
     if (!list) {
-      return c.json({ success: false, error: { message: "Task list not found" } }, 404);
+      return notFoundError(c, "Task list");
     }
-    
-    return c.json({ success: true, data: list });
+
+    return successResponse(c, list);
   } catch (error) {
-    console.error("Error updating task list:", error);
-    return c.json(
-      { 
-        success: false, 
-        error: { message: error instanceof Error ? error.message : "Failed to update task list" } 
-      }, 
-      500
-    );
+    return handleError(c, error, "update task list");
   }
 });
 
 // Delete a task list
-tasks.delete("/lists/:listId", async (c) => {
+tasks.delete("/lists/:listId", async (c: ProtectedContext) => {
   try {
-    const userId = await getUserIdFromToken(c.req.header("Authorization"), c.env.JWT_SECRET);
-    if (!userId) {
-      return c.json({ success: false, error: { message: "Unauthorized" } }, 401);
-    }
-    
+    const userId = getAuthUserId(c);
     const listId = c.req.param("listId");
     const db = createDrizzleClient(c.env.DB);
     const taskService = new TaskService(db);
     const deleted = await taskService.deleteTaskList(listId, userId);
-    
+
     if (!deleted) {
-      return c.json({ success: false, error: { message: "Task list not found" } }, 404);
+      return notFoundError(c, "Task list");
     }
-    
-    return c.json({ success: true, data: { deleted: true } });
+
+    return successResponse(c, { deleted: true });
   } catch (error) {
-    console.error("Error deleting task list:", error);
-    return c.json(
-      { 
-        success: false, 
-        error: { message: error instanceof Error ? error.message : "Failed to delete task list" } 
-      }, 
-      500
-    );
+    return handleError(c, error, "delete task list");
   }
 });
 
 // Create a new task in a list
-tasks.post("/lists/:listId/tasks", async (c) => {
+tasks.post("/lists/:listId/tasks", async (c: ProtectedContext) => {
   try {
-    const userId = await getUserIdFromToken(c.req.header("Authorization"), c.env.JWT_SECRET);
-    if (!userId) {
-      return c.json({ success: false, error: { message: "Unauthorized" } }, 401);
-    }
-
+    const userId = getAuthUserId(c);
     const listId = c.req.param("listId");
     const body = await c.req.json<CreateTaskRequest>();
 
     if (!body.title || body.title.trim() === "") {
-      return c.json({ success: false, error: { message: "Task title is required" } }, 400);
+      return validationError(c, "Task title is required");
     }
 
     const db = createDrizzleClient(c.env.DB);
     const taskService = new TaskService(db);
     const task = await taskService.createTask(listId, userId, body.title);
 
-    return c.json({ success: true, data: task }, 201);
+    return successResponse(c, task, undefined, 201);
   } catch (error) {
-    console.error("Error creating task:", error);
-    return c.json(
-      {
-        success: false,
-        error: { message: error instanceof Error ? error.message : "Failed to create task" }
-      },
-      500
-    );
+    return handleError(c, error, "create task");
   }
 });
 
 // Create a new task without a list (list_id will be null)
-tasks.post("/tasks", async (c) => {
+tasks.post("/tasks", async (c: ProtectedContext) => {
   try {
-    const userId = await getUserIdFromToken(c.req.header("Authorization"), c.env.JWT_SECRET);
-    if (!userId) {
-      return c.json({ success: false, error: { message: "Unauthorized" } }, 401);
-    }
-
+    const userId = getAuthUserId(c);
     const body = await c.req.json<CreateTaskRequest>();
 
     if (!body.title || body.title.trim() === "") {
-      return c.json({ success: false, error: { message: "Task title is required" } }, 400);
+      return validationError(c, "Task title is required");
     }
 
     const db = createDrizzleClient(c.env.DB);
     const taskService = new TaskService(db);
     const task = await taskService.createTaskWithoutList(userId, body.title);
 
-    return c.json({ success: true, data: task }, 201);
+    return successResponse(c, task, undefined, 201);
   } catch (error) {
-    console.error("Error creating task:", error);
-    return c.json(
-      {
-        success: false,
-        error: { message: error instanceof Error ? error.message : "Failed to create task" }
-      },
-      500
-    );
+    return handleError(c, error, "create task");
   }
 });
 
 // Update a task
-tasks.put("/tasks/:taskId", async (c) => {
+tasks.put("/tasks/:taskId", async (c: ProtectedContext) => {
   try {
-    const userId = await getUserIdFromToken(c.req.header("Authorization"), c.env.JWT_SECRET);
-    if (!userId) {
-      return c.json({ success: false, error: { message: "Unauthorized" } }, 401);
-    }
-    
+    const userId = getAuthUserId(c);
     const taskId = c.req.param("taskId");
     const body = await c.req.json<UpdateTaskRequest>();
-    
+
     const db = createDrizzleClient(c.env.DB);
     const taskService = new TaskService(db);
     const task = await taskService.updateTask(taskId, userId, body);
-    
+
     if (!task) {
-      return c.json({ success: false, error: { message: "Task not found" } }, 404);
+      return notFoundError(c, "Task");
     }
-    
-    return c.json({ success: true, data: task });
+
+    return successResponse(c, task);
   } catch (error) {
-    console.error("Error updating task:", error);
-    return c.json(
-      { 
-        success: false, 
-        error: { message: error instanceof Error ? error.message : "Failed to update task" } 
-      }, 
-      500
-    );
+    return handleError(c, error, "update task");
   }
 });
 
 // Delete a task
-tasks.delete("/tasks/:taskId", async (c) => {
+tasks.delete("/tasks/:taskId", async (c: ProtectedContext) => {
   try {
-    const userId = await getUserIdFromToken(c.req.header("Authorization"), c.env.JWT_SECRET);
-    if (!userId) {
-      return c.json({ success: false, error: { message: "Unauthorized" } }, 401);
-    }
-    
+    const userId = getAuthUserId(c);
     const taskId = c.req.param("taskId");
     const db = createDrizzleClient(c.env.DB);
     const taskService = new TaskService(db);
     const deleted = await taskService.deleteTask(taskId, userId);
-    
+
     if (!deleted) {
-      return c.json({ success: false, error: { message: "Task not found" } }, 404);
+      return notFoundError(c, "Task");
     }
-    
-    return c.json({ success: true, data: { deleted: true } });
+
+    return successResponse(c, { deleted: true });
   } catch (error) {
-    console.error("Error deleting task:", error);
-    return c.json(
-      { 
-        success: false, 
-        error: { message: error instanceof Error ? error.message : "Failed to delete task" } 
-      }, 
-      500
-    );
+    return handleError(c, error, "delete task");
   }
 });
 

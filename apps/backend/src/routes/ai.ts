@@ -1,137 +1,74 @@
 import { Hono } from "hono";
 import type { Env } from "../types/env";
-import type { ApiResponse } from "@chronos/types";
+import { authMiddleware, getAuthUserId, type ProtectedContext } from "../middleware/auth";
+import {
+  successResponse,
+  validationError,
+  handleError,
+  errorResponse,
+  ErrorCodes,
+} from "../utils/responses";
 
-const ai = new Hono<{ Bindings: Env }>();
+const ai = new Hono<{ Bindings: Env; Variables: { userId: string } }>();
 
-// Helper to get user ID from auth token
-async function getUserIdFromToken(authHeader: string | undefined, jwtSecret: string): Promise<string | null> {
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return null;
-  }
-  
-  const token = authHeader.slice(7);
-  
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) {
-      return null;
-    }
-
-    const [encodedHeader, encodedPayload, signature] = parts;
-
-    // Verify signature
-    const encoder = new TextEncoder();
-    const key = await crypto.subtle.importKey(
-      "raw",
-      encoder.encode(jwtSecret),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"]
-    );
-
-    const signatureData = await crypto.subtle.sign("HMAC", key, encoder.encode(`${encodedHeader}.${encodedPayload}`));
-    const expectedSignature = btoa(String.fromCharCode(...new Uint8Array(signatureData)))
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
-
-    if (signature !== expectedSignature) {
-      return null;
-    }
-
-    // Decode and parse payload
-    const pad = encodedPayload.length % 4;
-    const paddedPayload = pad ? encodedPayload + "=".repeat(4 - pad) : encodedPayload;
-    const payload = JSON.parse(atob(paddedPayload.replace(/-/g, "+").replace(/_/g, "/")));
-
-    // Check expiration
-    if (payload.exp < Math.floor(Date.now() / 1000)) {
-      return null;
-    }
-
-    return payload.sub;
-  } catch {
-    return null;
-  }
-}
-
-// POST /api/ai/chat - Chat with AI
+// POST /api/ai/chat - Chat with AI (public endpoint)
 ai.post("/chat", async (c) => {
   try {
-    const { prompt } = await c.req.json();
+    const { prompt } = await c.req.json<{ prompt: string }>();
 
     if (!prompt || typeof prompt !== "string") {
-      return c.json<ApiResponse<null>>(
-        {
-          success: false,
-          error: {
-            code: "INVALID_INPUT",
-            message: "Prompt is required and must be a string",
-          },
-        },
-        400
-      );
+      return validationError(c, "Prompt is required and must be a string");
     }
 
     const response = await c.env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
       prompt,
     });
 
-    return c.json<ApiResponse<unknown>>({
-      success: true,
-      data: response,
-    });
+    return successResponse(c, response);
   } catch (error) {
-    console.error("AI chat error:", error);
-    return c.json<ApiResponse<null>>(
-      {
-        success: false,
-        error: {
-          code: "AI_ERROR",
-          message: error instanceof Error ? error.message : "AI request failed",
-        },
-      },
+    return errorResponse(
+      c,
+      ErrorCodes.AI_ERROR,
+      error instanceof Error ? error.message : "AI request failed",
       500
     );
   }
 });
 
-// POST /api/ai/schedule - AI-powered task scheduling
-ai.post("/schedule", async (c) => {
+// POST /api/ai/schedule - AI-powered task scheduling (protected)
+ai.post("/schedule", authMiddleware, async (c: ProtectedContext) => {
   try {
-    const userId = await getUserIdFromToken(c.req.header("Authorization"), c.env.JWT_SECRET);
-    if (!userId) {
-      return c.json<ApiResponse<null>>(
-        {
-          success: false,
-          error: {
-            code: "UNAUTHORIZED",
-            message: "Authentication required",
-          },
-        },
-        401
-      );
+    const userId = getAuthUserId(c);
+    const body = await c.req.json<{
+      tasks?: string[];
+      preferences?: Record<string, unknown>;
+    }>();
+
+    // Basic implementation - can be expanded later
+    const { tasks = [], preferences = {} } = body;
+
+    if (tasks.length === 0) {
+      return validationError(c, "At least one task is required for scheduling");
     }
 
-    // TODO: Implement scheduling logic
-    return c.json<ApiResponse<null>>({
-      success: true,
-      data: null,
+    // Generate scheduling prompt
+    const schedulePrompt = `You are a task scheduling assistant. Help schedule these tasks optimally:
+Tasks: ${tasks.join(", ")}
+User preferences: ${JSON.stringify(preferences)}
+
+Provide a simple JSON schedule with task names and suggested time slots.`;
+
+    const response = await c.env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+      prompt: schedulePrompt,
     });
 
+    return successResponse(c, {
+      userId,
+      schedule: response,
+      tasksCount: tasks.length,
+    });
   } catch (error) {
-    console.error("AI schedule error:", error);
-    return c.json<ApiResponse<null>>(
-      {
-        success: false,
-        error: {
-          code: "SCHEDULE_ERROR",
-          message: error instanceof Error ? error.message : "Failed to schedule tasks",
-        },
-      },
-      500
-    );
+    return handleError(c, error, "schedule tasks");
   }
 });
 

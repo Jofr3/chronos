@@ -1,51 +1,20 @@
 import { Hono } from "hono";
 import type { Env } from "../types/env";
-import type { ApiResponse, ApiError } from "@chronos/types/api";
 import type { User } from "@chronos/types/user";
 import { UserService } from "../services/user.service";
 import { createDrizzleClient } from "../db/client";
 import * as authQueries from "../db/queries/auth";
+import { hashPassword } from "../utils/password";
+import {
+  successResponse,
+  validationError,
+  notFoundError,
+  handleError,
+  errorResponse,
+  ErrorCodes,
+} from "../utils/responses";
 
 const users = new Hono<{ Bindings: Env }>();
-
-// Helper function to hash password using Web Crypto API
-async function hashPassword(password: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  
-  // Generate a random salt
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  
-  // Import the password as a key
-  const keyMaterial = await crypto.subtle.importKey(
-    "raw",
-    data,
-    "PBKDF2",
-    false,
-    ["deriveBits"]
-  );
-  
-  // Derive bits using PBKDF2
-  const derivedBits = await crypto.subtle.deriveBits(
-    {
-      name: "PBKDF2",
-      salt: salt,
-      iterations: 100000,
-      hash: "SHA-256",
-    },
-    keyMaterial,
-    256
-  );
-  
-  // Combine salt and hash for storage
-  const hashArray = new Uint8Array(derivedBits);
-  const combined = new Uint8Array(salt.length + hashArray.length);
-  combined.set(salt);
-  combined.set(hashArray, salt.length);
-  
-  // Convert to base64 for storage
-  return btoa(String.fromCharCode(...combined));
-}
 
 users.get("/", async (c) => {
   try {
@@ -53,25 +22,9 @@ users.get("/", async (c) => {
     const userService = new UserService(db);
     const allUsers = await userService.getAllUsers();
 
-    const response: ApiResponse<User[]> = {
-      data: allUsers,
-      success: true,
-      message: "Users retrieved successfully",
-    };
-
-    return c.json(response);
+    return successResponse(c, allUsers, "Users retrieved successfully");
   } catch (error) {
-    const errorResponse: ApiResponse<null> & { error: ApiError } = {
-      data: null,
-      success: false,
-      message: "Failed to retrieve users",
-      error: {
-        code: "USER_FETCH_ERROR",
-        message: error instanceof Error ? error.message : "Unknown error",
-      },
-    };
-
-    return c.json(errorResponse, 500);
+    return handleError(c, error, "retrieve users");
   }
 });
 
@@ -83,95 +36,57 @@ users.get("/:id", async (c) => {
     const user = await userService.getUserById(id);
 
     if (!user) {
-      const errorResponse: ApiResponse<null> & { error: ApiError } = {
-        data: null,
-        success: false,
-        message: "User not found",
-        error: {
-          code: "USER_NOT_FOUND",
-          message: `User with id ${id} does not exist`,
-        },
-      };
-
-      return c.json(errorResponse, 404);
+      return notFoundError(c, "User");
     }
 
-    const response: ApiResponse<User> = {
-      data: user,
-      success: true,
-      message: "User retrieved successfully",
-    };
-
-    return c.json(response);
+    return successResponse(c, user, "User retrieved successfully");
   } catch (error) {
-    const errorResponse: ApiResponse<null> & { error: ApiError } = {
-      data: null,
-      success: false,
-      message: "Failed to retrieve user",
-      error: {
-        code: "USER_FETCH_ERROR",
-        message: error instanceof Error ? error.message : "Unknown error",
-      },
-    };
-
-    return c.json(errorResponse, 500);
+    return handleError(c, error, "retrieve user");
   }
 });
 
 users.post("/", async (c) => {
   try {
-    const body = await c.req.json();
+    const body = await c.req.json<{
+      email: string;
+      username: string;
+      first_name?: string;
+      last_name?: string;
+      role?: string;
+    }>();
     const { email, username, first_name, last_name, role } = body;
 
     if (!email || !username) {
-      const errorResponse: ApiResponse<null> & { error: ApiError } = {
-        data: null,
-        success: false,
-        message: "Validation failed",
-        error: {
-          code: "VALIDATION_ERROR",
-          message: "Email and username are required",
-          details: { 
-            email: !email ? "required" : undefined, 
-            username: !username ? "required" : undefined 
-          },
-        },
-      };
-
-      return c.json(errorResponse, 400);
+      return validationError(c, "Email and username are required", {
+        email: !email ? "required" : undefined,
+        username: !username ? "required" : undefined,
+      });
     }
 
     const db = createDrizzleClient(c.env.DB);
     const userService = new UserService(db);
     const user = await userService.createUser({ email, username, first_name, last_name, role });
 
-    const response: ApiResponse<User> = {
-      data: user,
-      success: true,
-      message: "User created successfully",
-    };
-
-    return c.json(response, 201);
+    return successResponse(c, user, "User created successfully", 201);
   } catch (error) {
-    const errorResponse: ApiResponse<null> & { error: ApiError } = {
-      data: null,
-      success: false,
-      message: "Failed to create user",
-      error: {
-        code: "USER_CREATE_ERROR",
-        message: error instanceof Error ? error.message : "Unknown error",
-      },
-    };
-
-    const statusCode = error instanceof Error && error.message.includes("already exists") ? 409 : 500;
-    return c.json(errorResponse, statusCode);
+    const message = error instanceof Error ? error.message : "";
+    if (message.includes("already exists")) {
+      return errorResponse(c, ErrorCodes.USER_EXISTS, message, 409);
+    }
+    return handleError(c, error, "create user");
   }
 });
 
 users.put("/:id", async (c) => {
   try {
     const id = c.req.param("id");
-    const body = await c.req.json();
+    const body = await c.req.json<{
+      email?: string;
+      username?: string;
+      first_name?: string;
+      last_name?: string;
+      role?: string;
+    }>();
     const { email, username, first_name, last_name, role } = body;
 
     const db = createDrizzleClient(c.env.DB);
@@ -179,80 +94,40 @@ users.put("/:id", async (c) => {
     const user = await userService.updateUser(id, { email, username, first_name, last_name, role });
 
     if (!user) {
-      const errorResponse: ApiResponse<null> & { error: ApiError } = {
-        data: null,
-        success: false,
-        message: "User not found",
-        error: {
-          code: "USER_NOT_FOUND",
-          message: `User with id ${id} does not exist`,
-        },
-      };
-
-      return c.json(errorResponse, 404);
+      return notFoundError(c, "User");
     }
 
-    const response: ApiResponse<User> = {
-      data: user,
-      success: true,
-      message: "User updated successfully",
-    };
-
-    return c.json(response);
+    return successResponse(c, user, "User updated successfully");
   } catch (error) {
-    const errorResponse: ApiResponse<null> & { error: ApiError } = {
-      data: null,
-      success: false,
-      message: "Failed to update user",
-      error: {
-        code: "USER_UPDATE_ERROR",
-        message: error instanceof Error ? error.message : "Unknown error",
-      },
-    };
-
-    return c.json(errorResponse, 500);
+    return handleError(c, error, "update user");
   }
 });
 
 users.post("/with-password", async (c) => {
   try {
-    const body = await c.req.json();
+    const body = await c.req.json<{
+      email: string;
+      username: string;
+      password: string;
+      first_name?: string;
+      last_name?: string;
+      role?: string;
+    }>();
     const { email, username, password, first_name, last_name, role } = body;
 
     if (!email || !username || !password) {
-      const errorResponse: ApiResponse<null> & { error: ApiError } = {
-        data: null,
-        success: false,
-        message: "Validation failed",
-        error: {
-          code: "VALIDATION_ERROR",
-          message: "Email, username, and password are required",
-          details: {
-            email: !email ? "required" : undefined,
-            username: !username ? "required" : undefined,
-            password: !password ? "required" : undefined,
-          },
-        },
-      };
-
-      return c.json(errorResponse, 400);
+      return validationError(c, "Email, username, and password are required", {
+        email: !email ? "required" : undefined,
+        username: !username ? "required" : undefined,
+        password: !password ? "required" : undefined,
+      });
     }
 
     if (password.length < 8) {
-      const errorResponse: ApiResponse<null> & { error: ApiError } = {
-        data: null,
-        success: false,
-        message: "Validation failed",
-        error: {
-          code: "VALIDATION_ERROR",
-          message: "Password must be at least 8 characters",
-        },
-      };
-
-      return c.json(errorResponse, 400);
+      return validationError(c, "Password must be at least 8 characters");
     }
 
-    // Hash the password
+    // Hash the password using shared utility
     const passwordHash = await hashPassword(password);
 
     // Create user with password
@@ -279,26 +154,13 @@ users.post("/with-password", async (c) => {
       deleted_at: createdUser.deleted_at,
     };
 
-    const response: ApiResponse<User> = {
-      data: user,
-      success: true,
-      message: "User created successfully",
-    };
-
-    return c.json(response, 201);
+    return successResponse(c, user, "User created successfully", 201);
   } catch (error) {
-    const errorResponse: ApiResponse<null> & { error: ApiError } = {
-      data: null,
-      success: false,
-      message: "Failed to create user",
-      error: {
-        code: "USER_CREATE_ERROR",
-        message: error instanceof Error ? error.message : "Unknown error",
-      },
-    };
-
-    const statusCode = error instanceof Error && error.message.includes("already exists") ? 409 : 500;
-    return c.json(errorResponse, statusCode);
+    const message = error instanceof Error ? error.message : "";
+    if (message.includes("already exists")) {
+      return errorResponse(c, ErrorCodes.USER_EXISTS, message, 409);
+    }
+    return handleError(c, error, "create user");
   }
 });
 
@@ -310,38 +172,12 @@ users.delete("/:id", async (c) => {
     const deleted = await userService.deleteUser(id);
 
     if (!deleted) {
-      const errorResponse: ApiResponse<null> & { error: ApiError } = {
-        data: null,
-        success: false,
-        message: "User not found",
-        error: {
-          code: "USER_NOT_FOUND",
-          message: `User with id ${id} does not exist`,
-        },
-      };
-
-      return c.json(errorResponse, 404);
+      return notFoundError(c, "User");
     }
 
-    const response: ApiResponse<{ id: string }> = {
-      data: { id },
-      success: true,
-      message: "User deleted successfully",
-    };
-
-    return c.json(response);
+    return successResponse(c, { id }, "User deleted successfully");
   } catch (error) {
-    const errorResponse: ApiResponse<null> & { error: ApiError } = {
-      data: null,
-      success: false,
-      message: "Failed to delete user",
-      error: {
-        code: "USER_DELETE_ERROR",
-        message: error instanceof Error ? error.message : "Unknown error",
-      },
-    };
-
-    return c.json(errorResponse, 500);
+    return handleError(c, error, "delete user");
   }
 });
 

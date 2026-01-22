@@ -54,6 +54,45 @@ export async function getAllTaskLists(db: DrizzleClient, userId: string): Promis
   return result.map(rowToTaskList);
 }
 
+/**
+ * Get all task lists with their tasks in a single optimized query
+ * This avoids the N+1 query problem by using a LEFT JOIN
+ */
+export async function getAllTaskListsWithTasks(
+  db: DrizzleClient,
+  userId: string
+): Promise<Array<TaskList & { tasks: Task[] }>> {
+  // Fetch all lists and tasks in two queries (more efficient than N+1)
+  const [lists, allTasks] = await Promise.all([
+    db
+      .select()
+      .from(taskLists)
+      .where(eq(taskLists.user_id, userId))
+      .orderBy(desc(taskLists.created_at)),
+    db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.user_id, userId))
+      .orderBy(asc(tasks.created_at)),
+  ]);
+
+  // Group tasks by list_id
+  const tasksByListId = new Map<string, Task[]>();
+  for (const task of allTasks) {
+    if (task.list_id) {
+      const listTasks = tasksByListId.get(task.list_id) || [];
+      listTasks.push(rowToTask(task));
+      tasksByListId.set(task.list_id, listTasks);
+    }
+  }
+
+  // Combine lists with their tasks
+  return lists.map((list) => ({
+    ...rowToTaskList(list),
+    tasks: tasksByListId.get(list.id) || [],
+  }));
+}
+
 export async function getTaskListById(
   db: DrizzleClient,
   listId: string,

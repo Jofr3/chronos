@@ -7,19 +7,8 @@ export class TaskService {
 
   // Task List methods
   async getAllTaskListsWithTasks(userId: string): Promise<TaskListWithTasks[]> {
-    const lists = await taskQueries.getAllTaskLists(this.db, userId);
-
-    const listsWithTasks = await Promise.all(
-      lists.map(async (list) => {
-        const tasks = await taskQueries.getTasksByListId(this.db, list.id);
-        return {
-          ...list,
-          tasks,
-        };
-      })
-    );
-
-    return listsWithTasks;
+    // Use optimized query that fetches lists and tasks in parallel (2 queries instead of N+1)
+    return taskQueries.getAllTaskListsWithTasks(this.db, userId);
   }
 
   async getTasksWithoutList(userId: string): Promise<Task[]> {
@@ -31,7 +20,7 @@ export class TaskService {
     if (!list) return null;
 
     const tasks = await taskQueries.getTasksByListId(this.db, listId);
-    
+
     return {
       ...list,
       tasks,
