@@ -1,12 +1,6 @@
 import type { Event, CreateEventRequest } from "@chronos/types";
 import { getApiBaseUrl } from "~/config/env";
-
-// Helper to get auth token from cookie
-function getAuthToken(): string | null {
-  if (typeof document === "undefined") return null;
-  const match = document.cookie.match(/chronos_auth_token=([^;]+)/);
-  return match ? match[1] : null;
-}
+import { getAuthToken } from "~/utils/auth";
 
 export async function getEvents(
   startDate?: string,
@@ -19,11 +13,11 @@ export async function getEvents(
 
   const apiUrl = getApiBaseUrl();
   let url = `${apiUrl}/api/events`;
-  
+
   const params = new URLSearchParams();
   if (startDate) params.append("startDate", startDate);
   if (endDate) params.append("endDate", endDate);
-  
+
   if (params.toString()) {
     url += `?${params.toString()}`;
   }
