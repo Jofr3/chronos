@@ -89,9 +89,9 @@ app.post("/", async (c) => {
 
   const body = await c.req.json<CreateEventRequest>();
 
-  if (!body.title || !body.date || !body.start_time || !body.end_time) {
+  if (!body.task_id || !body.date || !body.start_time || !body.end_time) {
     return c.json(
-      { success: false, error: { message: "Missing required fields" } },
+      { success: false, error: { message: "Missing required fields (task_id, date, start_time, end_time)" } },
       400
     );
   }
@@ -103,8 +103,7 @@ app.post("/", async (c) => {
     db,
     eventId,
     userId,
-    body.task_id || null,
-    body.title,
+    body.task_id,
     body.date,
     body.start_time,
     body.end_time

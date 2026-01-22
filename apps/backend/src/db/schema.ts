@@ -81,6 +81,7 @@ export const tasks = sqliteTable(
     updated_at: text("updated_at")
       .notNull()
       .default(sql`(datetime('now'))`),
+    deleted_at: text("deleted_at"),
   },
   (table) => ({
     userIdIdx: index("idx_tasks_user_id").on(table.user_id),
@@ -98,8 +99,9 @@ export const events = sqliteTable(
     user_id: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    task_id: text("task_id").references(() => tasks.id, { onDelete: "cascade" }),
-    title: text("title").notNull(),
+    task_id: text("task_id")
+      .notNull()
+      .references(() => tasks.id, { onDelete: "cascade" }),
     date: text("date").notNull(), // ISO date string (YYYY-MM-DD)
     start_time: text("start_time").notNull(), // Time in HH:MM format
     end_time: text("end_time").notNull(), // Time in HH:MM format

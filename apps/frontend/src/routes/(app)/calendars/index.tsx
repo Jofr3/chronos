@@ -188,7 +188,6 @@ export default component$(() => {
 
       // Then, create the event and link it to the task
       await createEvent({
-        title: createEventModal.value.title,
         date: createEventModal.value.date,
         start_time: createEventModal.value.startTime,
         end_time: createEventModal.value.endTime,
