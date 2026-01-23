@@ -1,8 +1,6 @@
 /* Import component styles */
 @import './styles/common.css';
 @import './styles/auth.css';
-@import './styles/layout.css';
-@import './styles/admin.css';
 @import './styles/dashboard.css';
 
 /* Inter font for Notion-style dashboard */

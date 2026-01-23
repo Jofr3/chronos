@@ -91,10 +91,6 @@ export default component$(() => {
 
   return (
     <div class="auth-container">
-      {/* Background decoration */}
-      <div class="auth-bg-gradient-left"></div>
-      <div class="auth-bg-gradient-right"></div>
-
       <div class="auth-card">
         <div class="auth-header">
           <h1 class="auth-title">

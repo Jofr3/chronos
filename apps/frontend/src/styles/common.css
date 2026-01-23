@@ -35,10 +35,10 @@
   cursor: pointer;
   opacity: 0.7;
   transition: opacity 0.2s;
-}
 
-.error-close-btn:hover {
-  opacity: 1;
+  &:hover {
+    opacity: 1;
+  }
 }
 
 /* Success Message */

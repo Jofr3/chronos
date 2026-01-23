@@ -45,11 +45,11 @@ export default component$(() => {
   const showUserPopup = useSignal(false);
 
   return (
-    <div class="dash-dashboard" style={{ position: "relative" }}>
+    <div class="dashboard" style={{ position: "relative" }}>
       {/* User Menu */}
-      <div class="dash-user-menu">
+      <div class="user-menu">
         <button
-          class="dash-user-btn"
+          class="user-btn"
           onClick$={() => {
             showUserPopup.value = !showUserPopup.value;
           }}
@@ -69,11 +69,11 @@ export default component$(() => {
                 showUserPopup.value = false;
               }}
             />
-            <div class="dash-user-popup">
-              <div class="dash-user-popup-email">
+            <div class="user-popup">
+              <div class="user-popup-email">
                 {authData.value.user?.email}
               </div>
-              <a href="/logout" class="dash-user-popup-logout">
+              <a href="/logout" class="user-popup-logout">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
                 </svg>

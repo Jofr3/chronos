@@ -439,9 +439,9 @@ export default component$(() => {
     <>
       {/* Error Message */}
       {error.value && (
-        <div class="dash-error">
+        <div class="error">
           <span>{error.value}</span>
-          <button onClick$={() => (error.value = null)} class="dash-error-close">
+          <button onClick$={() => (error.value = null)} class="error-close">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
@@ -450,31 +450,31 @@ export default component$(() => {
       )}
 
       {/* ===== LEFT PANEL: Tasks ===== */}
-      <section class="dash-tasks-panel">
-        <div class="dash-tasks-header">
+      <section class="tasks-panel">
+        <div class="tasks-header">
           {/* List Tabs */}
-          <div class="dash-list-tabs">
-            <div class="dash-list-tabs-inner">
+          <div class="list-tabs">
+            <div class="list-tabs-inner">
               <button
-                class={`dash-list-tab ${activeListId.value === null ? 'active' : ''}`}
+                class={`list-tab ${activeListId.value === null ? 'active' : ''}`}
                 onClick$={() => { activeListId.value = null; }}
               >
-                <span class="dash-list-tab-dot" style={{ background: "#6b7280" }}></span>
+                <span class="list-tab-dot" style={{ background: "#6b7280" }}></span>
                 All
               </button>
               {lists.value.map((list, i) => (
                 <button
                   key={list.id}
-                  class={`dash-list-tab ${activeListId.value === list.id ? 'active' : ''}`}
+                  class={`list-tab ${activeListId.value === list.id ? 'active' : ''}`}
                   onClick$={() => { activeListId.value = list.id; }}
                 >
-                  <span class="dash-list-tab-dot" style={{ background: LIST_COLORS[i % LIST_COLORS.length] }}></span>
+                  <span class="list-tab-dot" style={{ background: LIST_COLORS[i % LIST_COLORS.length] }}></span>
                   {list.name}
                 </button>
               ))}
               {isCreatingList.value ? (
                 <input
-                  class="dash-list-tab-input"
+                  class="list-tab-input"
                   type="text"
                   placeholder="List name..."
                   value={newListName.value}
@@ -488,7 +488,7 @@ export default component$(() => {
                 />
               ) : (
                 <button
-                  class="dash-list-tab-add"
+                  class="list-tab-add"
                   title="Add list"
                   onClick$={() => { isCreatingList.value = true; }}
                 >
@@ -501,15 +501,15 @@ export default component$(() => {
           </div>
 
           {/* New Task Input */}
-          <div class="dash-new-task">
-            <div class="dash-new-task-inner">
-              <span class="dash-new-task-icon">
+          <div class="new-task">
+            <div class="new-task-inner">
+              <span class="new-task-icon">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <path d="M12 5v14M5 12h14" />
                 </svg>
               </span>
               <input
-                class="dash-new-task-input"
+                class="new-task-input"
                 type="text"
                 placeholder="New task..."
                 value={newTaskTitle.value}
@@ -523,26 +523,26 @@ export default component$(() => {
         </div>
 
         {/* Task List */}
-        <div class="dash-task-list">
+        <div class="task-list">
           {isLoading.value ? (
-            <div class="dash-loading">Loading...</div>
+            <div class="loading">Loading...</div>
           ) : (
-            <div class="dash-task-list-items">
+            <div class="task-list-items">
               {/* Pending Tasks */}
               {pendingTasks.map(({ task, listId }) => (
                 <div
                   key={task.id}
-                  class="dash-task-item"
+                  class="task-item"
                   onClick$={(e) => {
                     const target = e.target as HTMLElement;
-                    if (target.closest(".dash-task-checkbox-wrapper")) return;
+                    if (target.closest(".task-checkbox-wrapper")) return;
                     openEditModal(listId, task);
                   }}
                 >
-                  <div class="dash-task-checkbox-wrapper">
+                  <div class="task-checkbox-wrapper">
                     <input
                       type="checkbox"
-                      class="dash-task-checkbox"
+                      class="task-checkbox"
                       checked={task.completed}
                       onClick$={(e) => {
                         e.stopPropagation();
@@ -550,16 +550,16 @@ export default component$(() => {
                       }}
                     />
                   </div>
-                  <div class="dash-task-content">
-                    <span class="dash-task-title">{task.title}</span>
-                    <div class="dash-task-meta">
+                  <div class="task-content">
+                    <span class="task-title">{task.title}</span>
+                    <div class="task-meta">
                       {task.priority && task.priority !== "none" && (
-                        <span class={`dash-task-priority ${task.priority}`}>
+                        <span class={`task-priority ${task.priority}`}>
                           {task.priority === "high" ? "High" : task.priority === "normal" ? "Medium" : "Low"}
                         </span>
                       )}
                       {task.due_date && (
-                        <span class="dash-task-date">
+                        <span class="task-date">
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                             <line x1="16" y1="2" x2="16" y2="6" />
@@ -570,7 +570,7 @@ export default component$(() => {
                         </span>
                       )}
                       {task.duration && task.duration > 0 && (
-                        <span class="dash-task-duration">
+                        <span class="task-duration">
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10" />
                             <polyline points="12 6 12 12 16 14" />
@@ -579,7 +579,7 @@ export default component$(() => {
                         </span>
                       )}
                       {task.is_recurring && (
-                        <span class="dash-task-recurring">
+                        <span class="task-recurring">
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M23 4v6h-6M1 20v-6h6" />
                             <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
@@ -594,21 +594,21 @@ export default component$(() => {
 
               {/* Completed Tasks */}
               {completedTasks.length > 0 && (
-                <div class="dash-completed-divider">
+                <div class="completed-divider">
                   {completedTasks.map(({ task, listId }) => (
                     <div
                       key={task.id}
-                      class="dash-task-item completed"
+                      class="task-item completed"
                       onClick$={(e) => {
                         const target = e.target as HTMLElement;
-                        if (target.closest(".dash-task-checkbox-wrapper")) return;
+                        if (target.closest(".task-checkbox-wrapper")) return;
                         openEditModal(listId, task);
                       }}
                     >
-                      <div class="dash-task-checkbox-wrapper">
+                      <div class="task-checkbox-wrapper">
                         <input
                           type="checkbox"
-                          class="dash-task-checkbox"
+                          class="task-checkbox"
                           checked={task.completed}
                           onClick$={(e) => {
                             e.stopPropagation();
@@ -616,8 +616,8 @@ export default component$(() => {
                           }}
                         />
                       </div>
-                      <div class="dash-task-content">
-                        <span class="dash-task-title">{task.title}</span>
+                      <div class="task-content">
+                        <span class="task-title">{task.title}</span>
                       </div>
                     </div>
                   ))}
@@ -629,49 +629,49 @@ export default component$(() => {
       </section>
 
       {/* ===== RIGHT PANEL: Calendar ===== */}
-      <main class="dash-calendar-panel">
+      <main class="calendar-panel">
         {/* Calendar Header */}
-        <header class="dash-calendar-header">
-          <div class="dash-calendar-header-left">
-            <h2 class="dash-calendar-title">{calendarTitle.value}</h2>
-            <div class="dash-calendar-view-toggle">
+        <header class="calendar-header">
+          <div class="calendar-header-left">
+            <h2 class="calendar-title">{calendarTitle.value}</h2>
+            <div class="calendar-view-toggle">
               <button
-                class={`dash-calendar-view-btn ${currentView.value === "dayGridMonth" ? "active" : ""}`}
+                class={`calendar-view-btn ${currentView.value === "dayGridMonth" ? "active" : ""}`}
                 onClick$={() => handleChangeView("dayGridMonth")}
               >
                 Month
               </button>
               <button
-                class={`dash-calendar-view-btn ${currentView.value === "timeGridWeek" ? "active" : ""}`}
+                class={`calendar-view-btn ${currentView.value === "timeGridWeek" ? "active" : ""}`}
                 onClick$={() => handleChangeView("timeGridWeek")}
               >
                 Week
               </button>
               <button
-                class={`dash-calendar-view-btn ${currentView.value === "timeGridDay" ? "active" : ""}`}
+                class={`calendar-view-btn ${currentView.value === "timeGridDay" ? "active" : ""}`}
                 onClick$={() => handleChangeView("timeGridDay")}
               >
                 Day
               </button>
             </div>
             <button
-              class="dash-ai-schedule-btn"
+              class="ai-schedule-btn"
               onClick$={handleAISchedule}
               disabled={isScheduling.value}
             >
               {isScheduling.value ? "Scheduling..." : "Schedule"}
             </button>
           </div>
-          <div class="dash-calendar-header-right">
-            <button class="dash-calendar-nav-btn" onClick$={handlePrev}>
+          <div class="calendar-header-right">
+            <button class="calendar-nav-btn" onClick$={handlePrev}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M15 18l-6-6 6-6" />
               </svg>
             </button>
-            <button class="dash-calendar-today-btn" onClick$={handleToday}>
+            <button class="calendar-today-btn" onClick$={handleToday}>
               Today
             </button>
-            <button class="dash-calendar-nav-btn" onClick$={handleNext}>
+            <button class="calendar-nav-btn" onClick$={handleNext}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M9 18l6-6-6-6" />
               </svg>
@@ -680,14 +680,14 @@ export default component$(() => {
         </header>
 
         {/* Calendar Body */}
-        <div class="dash-calendar-body">
+        <div class="calendar-body">
           <div ref={calendarRef} id="calendar" style={{ flex: 1 }} />
         </div>
       </main>
 
       {/* Schedule Message */}
       {scheduleMessage.value && (
-        <div class={`dash-schedule-message ${scheduleMessage.value.includes("success") || scheduleMessage.value.includes("scheduled") ? "success" : "error"}`}>
+        <div class={`schedule-message ${scheduleMessage.value.includes("success") || scheduleMessage.value.includes("scheduled") ? "success" : "error"}`}>
           {scheduleMessage.value}
         </div>
       )}
@@ -695,102 +695,102 @@ export default component$(() => {
       {/* ===== Edit Task Modal ===== */}
       {editModal.isOpen && (
         <div
-          class="dash-modal-overlay"
+          class="modal-overlay"
           onClick$={(e) => {
             if (e.target === e.currentTarget) closeEditModal();
           }}
         >
-          <div class="dash-modal-content">
-            <div class="dash-modal-header">
-              <h2 class="dash-modal-title">Edit Task</h2>
-              <button onClick$={closeEditModal} class="dash-modal-close-btn">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2 class="modal-title">Edit Task</h2>
+              <button onClick$={closeEditModal} class="modal-close-btn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M18 6L6 18M6 6l12 12" />
                 </svg>
               </button>
             </div>
-            <div class="dash-modal-body">
-              <div class="dash-modal-field">
-                <label class="dash-modal-label">Title</label>
+            <div class="modal-body">
+              <div class="modal-field">
+                <label class="modal-label">Title</label>
                 <input
                   type="text"
                   value={editModal.title}
                   onInput$={(e) => editModal.title = (e.target as HTMLInputElement).value}
-                  class="dash-modal-input"
+                  class="modal-input"
                 />
               </div>
-              <div class="dash-modal-field">
-                <label class="dash-modal-label">Description</label>
+              <div class="modal-field">
+                <label class="modal-label">Description</label>
                 <textarea
                   value={editModal.description}
                   onInput$={(e) => editModal.description = (e.target as HTMLTextAreaElement).value}
-                  class="dash-modal-textarea"
+                  class="modal-textarea"
                   placeholder="Add details..."
                   rows={3}
                 />
               </div>
-              <div class="dash-modal-field">
-                <label class="dash-modal-label">Priority</label>
-                <div class="dash-modal-priority-group">
+              <div class="modal-field">
+                <label class="modal-label">Priority</label>
+                <div class="modal-priority-group">
                   {(["high", "normal", "low", "none"] as TaskPriority[]).map((p) => (
                     <button
                       key={p}
                       onClick$={() => editModal.priority = p}
-                      class={`dash-modal-priority-btn priority-${p} ${editModal.priority === p ? "active" : ""}`}
+                      class={`modal-priority-btn priority-${p} ${editModal.priority === p ? "active" : ""}`}
                     >
                       {p}
                     </button>
                   ))}
                 </div>
               </div>
-              <div class="dash-modal-field">
-                <label class="dash-modal-label">Duration (min)</label>
+              <div class="modal-field">
+                <label class="modal-label">Duration (min)</label>
                 <input
                   type="number"
                   value={editModal.duration}
                   onInput$={(e) => editModal.duration = (e.target as HTMLInputElement).value}
-                  class="dash-modal-input"
+                  class="modal-input"
                   placeholder="e.g., 30"
                   min="0"
                 />
               </div>
-              <div class="dash-modal-field">
-                <label class="dash-modal-label">Type</label>
-                <div class="dash-modal-task-type-group">
+              <div class="modal-field">
+                <label class="modal-label">Type</label>
+                <div class="modal-task-type-group">
                   <button
                     onClick$={() => editModal.isRecurring = false}
-                    class={`dash-modal-task-type-btn ${!editModal.isRecurring ? "active" : ""}`}
+                    class={`modal-task-type-btn ${!editModal.isRecurring ? "active" : ""}`}
                   >
                     One-shot
                   </button>
                   <button
                     onClick$={() => editModal.isRecurring = true}
-                    class={`dash-modal-task-type-btn ${editModal.isRecurring ? "active" : ""}`}
+                    class={`modal-task-type-btn ${editModal.isRecurring ? "active" : ""}`}
                   >
                     Recurring
                   </button>
                 </div>
               </div>
               {!editModal.isRecurring && (
-                <div class="dash-modal-field">
-                  <label class="dash-modal-label">Due Date</label>
+                <div class="modal-field">
+                  <label class="modal-label">Due Date</label>
                   <input
                     type="date"
                     value={editModal.dueDate}
                     onInput$={(e) => editModal.dueDate = (e.target as HTMLInputElement).value}
-                    class="dash-modal-input"
+                    class="modal-input"
                   />
                 </div>
               )}
               {editModal.isRecurring && (
-                <div class="dash-modal-field">
-                  <label class="dash-modal-label">Repeat on</label>
-                  <div class="dash-modal-recurring-days">
+                <div class="modal-field">
+                  <label class="modal-label">Repeat on</label>
+                  <div class="modal-recurring-days">
                     {["S", "M", "T", "W", "T", "F", "S"].map((day, index) => (
                       <button
                         key={index}
                         onClick$={() => toggleRecurringDay(index)}
-                        class={`dash-modal-day-btn ${editModal.recurringDays[index] ? "selected" : ""}`}
+                        class={`modal-day-btn ${editModal.recurringDays[index] ? "selected" : ""}`}
                       >
                         {day}
                       </button>
@@ -799,21 +799,21 @@ export default component$(() => {
                 </div>
               )}
               {editModal.isRecurring && (
-                <div class="dash-modal-field">
-                  <label class="dash-modal-label">End Date</label>
+                <div class="modal-field">
+                  <label class="modal-label">End Date</label>
                   <input
                     type="date"
                     value={editModal.dueDate}
                     onInput$={(e) => editModal.dueDate = (e.target as HTMLInputElement).value}
-                    class="dash-modal-input"
+                    class="modal-input"
                     placeholder="No end date"
                   />
                 </div>
               )}
             </div>
-            <div class="dash-modal-footer">
-              <button onClick$={closeEditModal} class="dash-modal-cancel-btn">Cancel</button>
-              <button onClick$={saveTaskEdits} class="dash-modal-save-btn">Save</button>
+            <div class="modal-footer">
+              <button onClick$={closeEditModal} class="modal-cancel-btn">Cancel</button>
+              <button onClick$={saveTaskEdits} class="modal-save-btn">Save</button>
             </div>
           </div>
         </div>
@@ -822,23 +822,23 @@ export default component$(() => {
       {/* ===== Create Event Modal ===== */}
       {createEventModal.value.isOpen && (
         <div
-          class="dash-modal-overlay"
+          class="modal-overlay"
           onClick$={(e) => {
             if (e.target === e.currentTarget) closeCreateEventModal();
           }}
         >
-          <div class="dash-modal-content">
-            <div class="dash-modal-header">
-              <h2 class="dash-modal-title">Create Event</h2>
-              <button onClick$={closeCreateEventModal} class="dash-modal-close-btn">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2 class="modal-title">Create Event</h2>
+              <button onClick$={closeCreateEventModal} class="modal-close-btn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M18 6L6 18M6 6l12 12" />
                 </svg>
               </button>
             </div>
-            <div class="dash-modal-body">
-              <div class="dash-modal-field">
-                <label class="dash-modal-label">Event Title</label>
+            <div class="modal-body">
+              <div class="modal-field">
+                <label class="modal-label">Event Title</label>
                 <input
                   type="text"
                   value={createEventModal.value.title}
@@ -851,15 +851,15 @@ export default component$(() => {
                   onKeyPress$={(e) => {
                     if (e.key === "Enter") handleCreateEvent();
                   }}
-                  class="dash-modal-input"
+                  class="modal-input"
                   placeholder="Enter event title..."
                   autoFocus
                 />
               </div>
-              <div class="dash-modal-field">
-                <label class="dash-modal-label">Date & Time</label>
-                <div class="dash-event-datetime">
-                  <div class="dash-event-datetime-item">
+              <div class="modal-field">
+                <label class="modal-label">Date & Time</label>
+                <div class="event-datetime">
+                  <div class="event-datetime-item">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                       <line x1="16" y1="2" x2="16" y2="6" />
@@ -868,7 +868,7 @@ export default component$(() => {
                     </svg>
                     <span>{new Date(createEventModal.value.date).toLocaleDateString()}</span>
                   </div>
-                  <div class="dash-event-datetime-item">
+                  <div class="event-datetime-item">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <circle cx="12" cy="12" r="10" />
                       <polyline points="12 6 12 12 16 14" />
@@ -878,20 +878,20 @@ export default component$(() => {
                 </div>
               </div>
               {createEventError.value && (
-                <div class="dash-modal-error">{createEventError.value}</div>
+                <div class="modal-error">{createEventError.value}</div>
               )}
             </div>
-            <div class="dash-modal-footer">
+            <div class="modal-footer">
               <button
                 onClick$={closeCreateEventModal}
-                class="dash-modal-cancel-btn"
+                class="modal-cancel-btn"
                 disabled={isCreatingEvent.value}
               >
                 Cancel
               </button>
               <button
                 onClick$={handleCreateEvent}
-                class="dash-modal-save-btn"
+                class="modal-save-btn"
                 disabled={isCreatingEvent.value}
               >
                 {isCreatingEvent.value ? "Creating..." : "Create"}
