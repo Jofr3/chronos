@@ -1,8 +1,7 @@
 import { component$, Slot, useSignal } from "@builder.io/qwik";
-import { routeLoader$, Link, useLocation } from "@builder.io/qwik-city";
+import { routeLoader$ } from "@builder.io/qwik-city";
 import type { AuthUser } from "@chronos/types/auth";
 import { getApiBaseUrl } from "~/config/env";
-import { LuCheckSquare, LuCalendar, LuPanelRightClose, LuPanelRightOpen, LuLogOut, LuUser } from "@qwikest/icons/lucide";
 
 // Auth check for all pages in this layout
 export const useAuthCheck = routeLoader$(async ({ redirect, cookie }) => {
@@ -43,91 +42,49 @@ export const useAuthCheck = routeLoader$(async ({ redirect, cookie }) => {
 
 export default component$(() => {
   const authData = useAuthCheck();
-  const isCollapsed = useSignal(true);
   const showUserPopup = useSignal(false);
-  const location = useLocation();
 
   return (
-    <div class="app-layout">
-      {/* Sidebar */}
-      <aside class={`sidebar ${isCollapsed.value ? 'sidebar-collapsed' : ''}`}>
-        {/* Collapse toggle button */}
+    <div class="dash-dashboard" style={{ position: "relative" }}>
+      {/* User Menu */}
+      <div class="dash-user-menu">
         <button
-          class="sidebar-toggle"
+          class="dash-user-btn"
           onClick$={() => {
-            isCollapsed.value = !isCollapsed.value;
+            showUserPopup.value = !showUserPopup.value;
           }}
-          title={isCollapsed.value ? "Expand sidebar" : "Collapse sidebar"}
+          title="User menu"
         >
-          {isCollapsed.value ? <LuPanelRightOpen size={24} /> : <LuPanelRightClose size={24} />}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
         </button>
 
-        {/* Navigation */}
-        <nav class="sidebar-nav">
-          <ul class="sidebar-nav-list">
-            <li>
-              <Link
-                href="/tasks"
-                class={`sidebar-nav-link ${location.url.pathname.startsWith('/tasks') ? 'sidebar-nav-link-active' : ''}`}
-              >
-                <LuCheckSquare size={20} />
-                {!isCollapsed.value && <span>Tasks</span>}
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/calendars"
-                class={`sidebar-nav-link ${location.url.pathname.startsWith('/calendars') ? 'sidebar-nav-link-active' : ''}`}
-              >
-                <LuCalendar size={20} />
-                {!isCollapsed.value && <span>Calendar</span>}
-              </Link>
-            </li>
-          </ul>
-        </nav>
-
-        {/* User menu at bottom */}
-        <div class="sidebar-user-menu">
-          <button
-            class="sidebar-user-avatar"
-            onClick$={() => {
-              showUserPopup.value = !showUserPopup.value;
-            }}
-            title="User menu"
-          >
-            <LuUser size={20} />
-          </button>
-
-          {/* User popup */}
-          {showUserPopup.value && (
-            <>
-              <div
-                class="user-popup-backdrop"
-                onClick$={() => {
-                  showUserPopup.value = false;
-                }}
-              />
-              <div class="user-popup">
-                <div class="user-popup-email">
-                  {authData.value.user?.email}
-                </div>
-                <a
-                  href="/logout"
-                  class="user-popup-logout-btn"
-                >
-                  <LuLogOut size={18} />
-                  <span>Logout</span>
-                </a>
+        {showUserPopup.value && (
+          <>
+            <div
+              style={{ position: "fixed", inset: 0, background: "transparent", zIndex: 49 }}
+              onClick$={() => {
+                showUserPopup.value = false;
+              }}
+            />
+            <div class="dash-user-popup">
+              <div class="dash-user-popup-email">
+                {authData.value.user?.email}
               </div>
-            </>
-          )}
-        </div>
-      </aside>
+              <a href="/logout" class="dash-user-popup-logout">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
+                </svg>
+                <span>Logout</span>
+              </a>
+            </div>
+          </>
+        )}
+      </div>
 
-      {/* Main content area */}
-      <main class="main-content">
-        <Slot />
-      </main>
+      <Slot />
     </div>
   );
 });

@@ -2,9 +2,11 @@
 @import './styles/common.css';
 @import './styles/auth.css';
 @import './styles/layout.css';
-@import './styles/tasks.css';
-@import './styles/calendar.css';
 @import './styles/admin.css';
+@import './styles/dashboard.css';
+
+/* Inter font for Notion-style dashboard */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
 :root {
   /* Dark Gray Palette */
@@ -94,33 +96,4 @@ body {
   }
 }
 
-/* Task Card Animations */
-@keyframes taskCardIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
-@keyframes taskListIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.task-item {
-  animation: taskCardIn 0.3s ease-out backwards;
-}
-
-.task-list-card {
-  animation: taskListIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
-}
