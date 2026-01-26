@@ -1,6 +1,5 @@
 import { component$ } from "@builder.io/qwik";
 import type { PropFunction } from "@builder.io/qwik";
-import type { TaskPriority } from "@chronos/types";
 import { DAYS_OF_WEEK, formatDuration } from "./types";
 
 interface EditTaskModalProps {
@@ -8,14 +7,12 @@ interface EditTaskModalProps {
   title: string;
   description: string;
   dueDate: string;
-  priority: TaskPriority;
   duration: string;
   isRecurring: boolean;
   recurringDays: boolean[];
   onTitleChange$: PropFunction<(value: string) => void>;
   onDescriptionChange$: PropFunction<(value: string) => void>;
   onDueDateChange$: PropFunction<(value: string) => void>;
-  onPriorityChange$: PropFunction<(value: TaskPriority) => void>;
   onDurationChange$: PropFunction<(value: string) => void>;
   onIsRecurringChange$: PropFunction<(value: boolean) => void>;
   onToggleRecurringDay$: PropFunction<(dayIndex: number) => void>;
@@ -29,14 +26,12 @@ export const EditTaskModal = component$<EditTaskModalProps>(
     title,
     description,
     dueDate,
-    priority,
     duration,
     isRecurring,
     recurringDays,
     onTitleChange$,
     onDescriptionChange$,
     onDueDateChange$,
-    onPriorityChange$,
     onDurationChange$,
     onIsRecurringChange$,
     onToggleRecurringDay$,
@@ -97,37 +92,6 @@ export const EditTaskModal = component$<EditTaskModalProps>(
                 placeholder="Add details about this task..."
                 rows={3}
               />
-            </div>
-
-            {/* Priority */}
-            <div class="modal-field">
-              <label class="modal-label">Priority</label>
-              <div class="modal-priority-group">
-                <button
-                  onClick$={() => onPriorityChange$("high")}
-                  class={`modal-priority-btn priority-high ${priority === "high" ? "active" : ""}`}
-                >
-                  High
-                </button>
-                <button
-                  onClick$={() => onPriorityChange$("normal")}
-                  class={`modal-priority-btn priority-normal ${priority === "normal" ? "active" : ""}`}
-                >
-                  Normal
-                </button>
-                <button
-                  onClick$={() => onPriorityChange$("low")}
-                  class={`modal-priority-btn priority-low ${priority === "low" ? "active" : ""}`}
-                >
-                  Low
-                </button>
-                <button
-                  onClick$={() => onPriorityChange$("none")}
-                  class={`modal-priority-btn priority-none ${priority === "none" ? "active" : ""}`}
-                >
-                  None
-                </button>
-              </div>
             </div>
 
             {/* Duration */}

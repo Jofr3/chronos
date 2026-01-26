@@ -205,54 +205,6 @@
   }
 }
 
-/* Priority Buttons */
-.modal-priority-group {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-}
-
-.modal-priority-btn {
-  padding: 6px 8px;
-  border: 1px solid var(--n-border);
-  border-radius: 4px;
-  background: white;
-  color: var(--n-text-light);
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 500;
-  transition: all 0.15s;
-  text-transform: capitalize;
-
-  &:hover {
-    border-color: #d1d1d0;
-  }
-
-  &.priority-high.active {
-    border-color: #dc2626;
-    background: #fef2f2;
-    color: #dc2626;
-  }
-
-  &.priority-normal.active {
-    border-color: #ea580c;
-    background: #fff7ed;
-    color: #ea580c;
-  }
-
-  &.priority-low.active {
-    border-color: #2563eb;
-    background: #eff6ff;
-    color: #2563eb;
-  }
-
-  &.priority-none.active {
-    border-color: #d1d1d0;
-    background: var(--n-sidebar);
-    color: var(--n-text);
-  }
-}
-
 /* Task Type Toggle */
 .modal-task-type-group {
   display: flex;

@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import type { Env } from "../types/env";
-import { getUserEvents, createEvent, deleteEvent } from "../db/queries/events";
-import type { CreateEventRequest } from "@chronos/types";
+import { getUserEvents, createEvent, updateEvent, deleteEvent } from "../db/queries/events";
+import type { CreateEventRequest, UpdateEventRequest } from "@chronos/types";
 import { createDrizzleClient } from "../db/client";
 import { authMiddleware, getAuthUserId, type ProtectedContext } from "../middleware/auth";
 import {
@@ -69,6 +69,34 @@ events.post("/", async (c: ProtectedContext) => {
     return successResponse(c, event, undefined, 201);
   } catch (error) {
     return handleError(c, error, "create event");
+  }
+});
+
+// Update event
+events.patch("/:id", async (c: ProtectedContext) => {
+  try {
+    const userId = getAuthUserId(c);
+    const eventId = c.req.param("id");
+    const body = await c.req.json<UpdateEventRequest>();
+
+    // Validate that at least one field is being updated
+    if (!body.date && !body.start_time && !body.end_time) {
+      return validationError(
+        c,
+        "At least one field (date, start_time, end_time) must be provided"
+      );
+    }
+
+    const db = createDrizzleClient(c.env.DB);
+    const updated = await updateEvent(db, eventId, userId, body);
+
+    if (!updated) {
+      return notFoundError(c, "Event");
+    }
+
+    return successResponse(c, updated);
+  } catch (error) {
+    return handleError(c, error, "update event");
   }
 });
 

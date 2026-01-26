@@ -69,9 +69,6 @@ export const tasks = sqliteTable(
     description: text("description"),
     completed: integer("completed", { mode: "boolean" }).notNull().default(false),
     due_date: text("due_date"),
-    priority: text("priority", { enum: ["high", "normal", "low", "none"] })
-      .notNull()
-      .default("none"),
     duration: integer("duration"), // Duration in minutes
     is_recurring: integer("is_recurring", { mode: "boolean" }).notNull().default(false),
     recurring_days: text("recurring_days"), // JSON string: "[0,1,2,3,4,5,6]"

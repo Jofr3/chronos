@@ -8,9 +8,9 @@ import {
   type NoSerialize,
 } from "@builder.io/qwik";
 import type { DocumentHead } from "@builder.io/qwik-city";
-import type { TaskListWithTasks, Task, DayOfWeek, TaskPriority, Event } from "@chronos/types";
+import type { TaskListWithTasks, Task, DayOfWeek, Event } from "@chronos/types";
 import { taskService } from "~/services/task.service";
-import { getEvents, createEvent } from "~/services/event.service";
+import { getEvents, createEvent, updateEvent } from "~/services/event.service";
 import { getApiBaseUrl } from "~/config/env";
 import { Calendar } from "@fullcalendar/core";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -134,7 +134,8 @@ export default component$(() => {
     }
   });
 
-  const deleteTask = $(async (listId: string | null, taskId: string) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _deleteTask = $(async (listId: string | null, taskId: string) => {
     try {
       await taskService.deleteTask(taskId);
       if (listId === null) {
@@ -178,7 +179,6 @@ export default component$(() => {
         title: editModal.title,
         description: editModal.description || null,
         due_date: editModal.dueDate || null,
-        priority: editModal.priority,
         duration: duration,
         is_recurring: editModal.isRecurring,
         recurring_days: recurringDays,
@@ -300,6 +300,59 @@ export default component$(() => {
     }
   });
 
+  const handleEventResize = $(async (eventId: string, taskId: string, start: Date, end: Date) => {
+    try {
+      const endTime = end.toTimeString().slice(0, 5);
+
+      // Calculate new duration in minutes
+      const durationMinutes = Math.round((end.getTime() - start.getTime()) / 60000);
+
+      // Update event end time and task duration in parallel
+      await Promise.all([
+        updateEvent(eventId, { end_time: endTime }),
+        taskService.updateTask(taskId, { duration: durationMinutes > 0 ? durationMinutes : null }),
+      ]);
+
+      // Refresh tasks to reflect the duration change in the UI
+      const [allLists, tasksNoList] = await Promise.all([
+        taskService.getAllTaskLists(),
+        taskService.getTasksWithoutList(),
+      ]);
+      lists.value = allLists;
+      tasksWithoutList.value = tasksNoList;
+    } catch (err) {
+      console.error("Failed to resize event:", err);
+      // Reload events to revert the visual change
+      await loadEvents();
+    }
+  });
+
+  const handleEventDrop = $(async (eventId: string, taskId: string, start: Date, end: Date) => {
+    try {
+      const date = start.toISOString().split("T")[0];
+      const startTime = start.toTimeString().slice(0, 5);
+      const endTime = end.toTimeString().slice(0, 5);
+
+      // Update event date/times and task due_date in parallel
+      await Promise.all([
+        updateEvent(eventId, { date, start_time: startTime, end_time: endTime }),
+        taskService.updateTask(taskId, { due_date: date }),
+      ]);
+
+      // Refresh tasks to reflect the due_date change in the UI
+      const [allLists, tasksNoList] = await Promise.all([
+        taskService.getAllTaskLists(),
+        taskService.getTasksWithoutList(),
+      ]);
+      lists.value = allLists;
+      tasksWithoutList.value = tasksNoList;
+    } catch (err) {
+      console.error("Failed to move event:", err);
+      // Reload events to revert the visual change
+      await loadEvents();
+    }
+  });
+
   const openCreateEventModal = $((dateStr: string, startTime: string, endTime: string) => {
     createEventModal.value = {
       isOpen: true,
@@ -379,7 +432,7 @@ export default component$(() => {
     if (!calendarRef.value) return;
     const calendar = new Calendar(calendarRef.value, {
       plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
-      initialView: "dayGridMonth",
+      initialView: "timeGridWeek",
       headerToolbar: false,
       editable: true,
       selectable: true,
@@ -387,7 +440,7 @@ export default component$(() => {
       dayMaxEvents: true,
       weekends: true,
       height: "100%",
-      scrollTime: "04:00:00",
+      scrollTime: "06:00:00",
       slotDuration: "00:10:00",
       allDaySlot: false,
       events: [],
@@ -399,6 +452,14 @@ export default component$(() => {
         const endTime = endDate.toTimeString().slice(0, 5);
         openCreateEventModal(date, startTime, endTime);
         if (calendar) calendar.unselect();
+      },
+      eventResize: (info) => {
+        const taskId = info.event.extendedProps.task_id;
+        handleEventResize(info.event.id, taskId, info.event.start!, info.event.end!);
+      },
+      eventDrop: (info) => {
+        const taskId = info.event.extendedProps.task_id;
+        handleEventDrop(info.event.id, taskId, info.event.start!, info.event.end!);
       },
     });
     calendar.render();
@@ -553,11 +614,6 @@ export default component$(() => {
                   <div class="task-content">
                     <span class="task-title">{task.title}</span>
                     <div class="task-meta">
-                      {task.priority && task.priority !== "none" && (
-                        <span class={`task-priority ${task.priority}`}>
-                          {task.priority === "high" ? "High" : task.priority === "normal" ? "Medium" : "Low"}
-                        </span>
-                      )}
                       {task.due_date && (
                         <span class="task-date">
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -728,20 +784,6 @@ export default component$(() => {
                   placeholder="Add details..."
                   rows={3}
                 />
-              </div>
-              <div class="modal-field">
-                <label class="modal-label">Priority</label>
-                <div class="modal-priority-group">
-                  {(["high", "normal", "low", "none"] as TaskPriority[]).map((p) => (
-                    <button
-                      key={p}
-                      onClick$={() => editModal.priority = p}
-                      class={`modal-priority-btn priority-${p} ${editModal.priority === p ? "active" : ""}`}
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
               </div>
               <div class="modal-field">
                 <label class="modal-label">Duration (min)</label>

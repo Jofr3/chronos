@@ -17,6 +17,10 @@ export interface AiOptions {
   stream?: boolean;
   max_tokens?: number;
   temperature?: number;
+  response_format?: {
+    type: "json_object" | "json_schema" | "text";
+    json_schema?: Record<string, unknown>;
+  };
 }
 
 export interface AiResponse {

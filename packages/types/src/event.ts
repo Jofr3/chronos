@@ -19,6 +19,12 @@ export interface CreateEventRequest {
   end_time: string;
 }
 
+export interface UpdateEventRequest {
+  date?: string;
+  start_time?: string;
+  end_time?: string;
+}
+
 export interface AIScheduleEvent {
   date: string;
   start_time: string;

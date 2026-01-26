@@ -1,4 +1,4 @@
-import type { Task, DayOfWeek, TaskPriority } from "@chronos/types";
+import type { Task, DayOfWeek } from "@chronos/types";
 
 export interface EditModalState {
   isOpen: boolean;
@@ -7,7 +7,6 @@ export interface EditModalState {
   title: string;
   description: string;
   dueDate: string;
-  priority: TaskPriority;
   duration: string;
   isRecurring: boolean;
   recurringDays: boolean[];
@@ -50,7 +49,6 @@ export function getInitialEditModalState(): EditModalState {
     title: "",
     description: "",
     dueDate: "",
-    priority: "none",
     duration: "",
     isRecurring: false,
     recurringDays: [false, false, false, false, false, false, false],
@@ -75,7 +73,6 @@ export function taskToEditModalState(task: Task, listId: string | null): Partial
     title: task.title,
     description: task.description || "",
     dueDate: task.due_date || "",
-    priority: task.priority,
     duration: task.duration !== null ? task.duration.toString() : "",
     isRecurring: task.is_recurring,
     recurringDays: days,

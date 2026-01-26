@@ -52,21 +52,8 @@ export const TaskItem = component$<TaskItemProps>(
             {task.title}
           </span>
           {/* Task metadata */}
-          {(task.due_date || task.is_recurring || task.priority !== "none") && (
+          {(task.due_date || task.is_recurring) && (
             <div class="task-metadata">
-              {task.priority !== "none" && (
-                <span class={`task-priority priority-${task.priority}`}>
-                  <svg
-                    width="12"
-                    height="12"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    stroke="none"
-                  >
-                    <path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z" />
-                  </svg>
-                </span>
-              )}
               {task.due_date && (
                 <span class="task-due-date">
                   <svg

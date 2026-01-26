@@ -5,11 +5,8 @@
     "dev": "bunx wrangler dev --env development",
     "pre": "bunx wrangler dev --env preview",
     "prod": "bunx wrangler dev",
-
     "drizzle": "bunx drizzle-kit studio",
-
     "build": "bun build src/index.ts --outfile=dist/index.js --target=bun",
-
     "migrate:dev": "bunx wrangler d1 execute DB --env development",
     "migrate:pre": "bunx wrangler d1 execute DB --env preview",
     "migrate:prod": "bunx wrangler d1 execute DB"

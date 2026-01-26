@@ -1,7 +1,7 @@
-import { eq, desc, asc, and, isNull } from "drizzle-orm";
+import { eq, desc, asc, and, isNull, sql } from "drizzle-orm";
 import type { DrizzleClient } from "../client";
-import { tasks, taskLists } from "../schema";
-import type { Task, TaskList, DayOfWeek, TaskPriority } from "@chronos/types";
+import { tasks, taskLists, events } from "../schema";
+import type { Task, TaskList, DayOfWeek } from "@chronos/types";
 
 // Helper to parse recurring_days JSON string to DayOfWeek array
 function parseRecurringDays(jsonString: string | null): DayOfWeek[] | null {
@@ -23,7 +23,6 @@ function rowToTask(row: typeof tasks.$inferSelect): Task {
     description: row.description,
     completed: row.completed,
     due_date: row.due_date,
-    priority: row.priority as TaskPriority,
     duration: row.duration,
     is_recurring: row.is_recurring,
     recurring_days: parseRecurringDays(row.recurring_days),
@@ -187,6 +186,67 @@ export async function getAllTasksByUserId(db: DrizzleClient, userId: string): Pr
   return result.map(rowToTask);
 }
 
+export interface SchedulableTask {
+  id: string;
+  title: string;
+  description: string | null;
+  due_date: string | null;
+  duration: number | null;
+  events: Array<{
+    id: string;
+    date: string;
+    start_time: string;
+    end_time: string;
+  }>;
+}
+
+export async function getIncompleteTasks(db: DrizzleClient, userId: string): Promise<SchedulableTask[]> {
+  const result = await db
+    .select({
+      id: tasks.id,
+      title: tasks.title,
+      description: tasks.description,
+      due_date: tasks.due_date,
+      duration: tasks.duration,
+      events: sql<string>`COALESCE(
+        json_group_array(
+          CASE WHEN ${events.id} IS NOT NULL THEN
+            json_object(
+              'id', ${events.id},
+              'date', ${events.date},
+              'start_time', ${events.start_time},
+              'end_time', ${events.end_time}
+            )
+          END
+        ) FILTER (WHERE ${events.id} IS NOT NULL),
+        '[]'
+      )`.as("events"),
+    })
+    .from(tasks)
+    .leftJoin(
+      events,
+      and(eq(tasks.id, events.task_id), sql`${events.date} >= date('now')`)
+    )
+    .where(
+      and(
+        eq(tasks.user_id, userId),
+        eq(tasks.completed, false),
+        eq(tasks.is_recurring, false)
+      )
+    )
+    .groupBy(tasks.id)
+    .orderBy(asc(tasks.created_at));
+
+  return result.map((row) => ({
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    due_date: row.due_date,
+    duration: row.duration,
+    events: JSON.parse(row.events) as SchedulableTask["events"],
+  }));
+}
+
 export async function getTasksWithoutList(db: DrizzleClient, userId: string): Promise<Task[]> {
   const result = await db
     .select()
@@ -276,7 +336,6 @@ export async function updateTask(
     description?: string | null;
     completed?: boolean;
     due_date?: string | null;
-    priority?: TaskPriority;
     duration?: number | null;
     is_recurring?: boolean;
     recurring_days?: DayOfWeek[] | null;
@@ -292,7 +351,6 @@ export async function updateTask(
   if (updates.description !== undefined) updateData.description = updates.description;
   if (updates.completed !== undefined) updateData.completed = updates.completed;
   if (updates.due_date !== undefined) updateData.due_date = updates.due_date;
-  if (updates.priority !== undefined) updateData.priority = updates.priority;
   if (updates.duration !== undefined) updateData.duration = updates.duration;
   if (updates.is_recurring !== undefined) updateData.is_recurring = updates.is_recurring;
   if (updates.recurring_days !== undefined) {

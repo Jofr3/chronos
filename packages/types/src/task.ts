@@ -3,9 +3,6 @@
 // Day of week: 0=Sunday, 1=Monday, ..., 6=Saturday
 export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
-// Task priority levels
-export type TaskPriority = "high" | "normal" | "low" | "none";
-
 export interface Task {
   id: string;
   user_id: string;
@@ -14,7 +11,6 @@ export interface Task {
   description: string | null;
   completed: boolean;
   due_date: string | null;
-  priority: TaskPriority;
   duration: number | null; // Duration in minutes
   is_recurring: boolean;
   recurring_days: DayOfWeek[] | null;
@@ -35,6 +31,15 @@ export interface TaskListWithTasks extends TaskList {
   tasks: Task[];
 }
 
+export interface TaskWithEvents extends Task {
+  events: Array<{
+    id: string;
+    date: string;
+    start_time: string;
+    end_time: string;
+  }>;
+}
+
 // Request/Response types
 export interface CreateTaskListRequest {
   name: string;
@@ -53,7 +58,6 @@ export interface UpdateTaskRequest {
   description?: string | null;
   completed?: boolean;
   due_date?: string | null;
-  priority?: TaskPriority;
   duration?: number | null;
   is_recurring?: boolean;
   recurring_days?: DayOfWeek[] | null;

@@ -1,6 +1,7 @@
 import type { DrizzleClient } from "../db/client";
-import type { Task, TaskList, TaskListWithTasks, DayOfWeek, TaskPriority } from "@chronos/types";
+import type { Task, TaskList, TaskListWithTasks, DayOfWeek } from "@chronos/types";
 import * as taskQueries from "../db/queries/tasks";
+import type { SchedulableTask } from "../db/queries/tasks";
 
 export class TaskService {
   constructor(private db: DrizzleClient) {}
@@ -13,6 +14,10 @@ export class TaskService {
 
   async getTasksWithoutList(userId: string): Promise<Task[]> {
     return taskQueries.getTasksWithoutList(this.db, userId);
+  }
+
+  async getIncompleteTasks(userId: string): Promise<SchedulableTask[]> {
+    return taskQueries.getIncompleteTasks(this.db, userId);
   }
 
   async getTaskList(listId: string, userId: string): Promise<TaskListWithTasks | null> {
@@ -65,7 +70,6 @@ export class TaskService {
       description?: string | null;
       completed?: boolean;
       due_date?: string | null;
-      priority?: TaskPriority;
       duration?: number | null;
       is_recurring?: boolean;
       recurring_days?: DayOfWeek[] | null;

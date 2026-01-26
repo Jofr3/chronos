@@ -264,28 +264,6 @@
   margin-top: 2px;
 }
 
-.task-priority {
-  padding: 1px 6px;
-  border-radius: 3px;
-  font-size: 10px;
-  font-weight: 500;
-
-  &.high {
-    background: #fef2f2;
-    color: #dc2626;
-  }
-
-  &.normal {
-    background: #fff7ed;
-    color: #ea580c;
-  }
-
-  &.low {
-    background: #eff6ff;
-    color: #2563eb;
-  }
-}
-
 .task-date {
   color: var(--n-text-light);
   font-size: 11px;
