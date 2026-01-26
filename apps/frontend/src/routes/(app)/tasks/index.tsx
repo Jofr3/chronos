@@ -57,6 +57,9 @@ export default component$(() => {
   const isCreatingEvent = useSignal(false);
   const createEventError = useSignal<string | null>(null);
 
+  // Task menu state
+  const openMenuTaskId = useSignal<string | null>(null);
+
   // ===== TASKS LOGIC =====
   const addTask = $(async () => {
     if (!newTaskTitle.value.trim()) return;
@@ -134,23 +137,63 @@ export default component$(() => {
     }
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _deleteTask = $(async (listId: string | null, taskId: string) => {
+  const loadEvents = $(async () => {
+    try {
+      const events = await getEvents();
+      const calendarEvents = events.map((event: Event) => ({
+        id: event.id,
+        title: event.title,
+        start: `${event.date}T${event.start_time}`,
+        end: `${event.date}T${event.end_time}`,
+        extendedProps: {
+          task_id: event.task_id,
+        },
+      }));
+      if (calendarInstance.value) {
+        calendarInstance.value.removeAllEvents();
+        calendarInstance.value.addEventSource(calendarEvents);
+      }
+    } catch (err) {
+      console.error("Failed to load events:", err);
+    }
+  });
+
+  const deleteTask = $(async (listId: string | null, taskId: string) => {
     try {
       await taskService.deleteTask(taskId);
       if (listId === null) {
         tasksWithoutList.value = tasksWithoutList.value.filter((t) => t.id !== taskId);
-        return;
+      } else {
+        lists.value = lists.value.map((list) => {
+          if (list.id === listId) {
+            return { ...list, tasks: list.tasks.filter((t) => t.id !== taskId) };
+          }
+          return list;
+        });
       }
-      lists.value = lists.value.map((list) => {
-        if (list.id === listId) {
-          return { ...list, tasks: list.tasks.filter((t) => t.id !== taskId) };
-        }
-        return list;
-      });
+      // Refresh calendar to remove associated events
+      await loadEvents();
     } catch (err) {
       error.value = err instanceof Error ? err.message : "Failed to delete task";
+    } finally {
+      openMenuTaskId.value = null;
     }
+  });
+
+  const findTaskById = $((taskId: string): { task: Task; listId: string | null } | null => {
+    // Check tasks without list
+    const taskWithoutList = tasksWithoutList.value.find((t) => t.id === taskId);
+    if (taskWithoutList) {
+      return { task: taskWithoutList, listId: null };
+    }
+    // Check tasks in lists
+    for (const list of lists.value) {
+      const task = list.tasks.find((t) => t.id === taskId);
+      if (task) {
+        return { task, listId: list.id };
+      }
+    }
+    return null;
   });
 
   const openEditModal = $((listId: string | null, task: Task) => {
@@ -214,27 +257,6 @@ export default component$(() => {
   });
 
   // ===== CALENDAR LOGIC =====
-  const loadEvents = $(async () => {
-    try {
-      const events = await getEvents();
-      const calendarEvents = events.map((event: Event) => ({
-        id: event.id,
-        title: event.title,
-        start: `${event.date}T${event.start_time}`,
-        end: `${event.date}T${event.end_time}`,
-        extendedProps: {
-          task_id: event.task_id,
-        },
-      }));
-      if (calendarInstance.value) {
-        calendarInstance.value.removeAllEvents();
-        calendarInstance.value.addEventSource(calendarEvents);
-      }
-    } catch (err) {
-      console.error("Failed to load events:", err);
-    }
-  });
-
   const handlePrev = $(() => {
     if (calendarInstance.value) {
       calendarInstance.value.prev();
@@ -461,6 +483,23 @@ export default component$(() => {
         const taskId = info.event.extendedProps.task_id;
         handleEventDrop(info.event.id, taskId, info.event.start!, info.event.end!);
       },
+      eventClick: async (info) => {
+        try {
+          const taskId = info.event.extendedProps.task_id;
+          if (!taskId) {
+            console.error("Event has no task_id");
+            return;
+          }
+          const found = await findTaskById(taskId);
+          if (found) {
+            await openEditModal(found.listId, found.task);
+          } else {
+            console.error("Task not found for id:", taskId);
+          }
+        } catch (err) {
+          console.error("Failed to open task from event:", err);
+        }
+      },
     });
     calendar.render();
     calendarInstance.value = noSerialize(calendar);
@@ -511,7 +550,15 @@ export default component$(() => {
       )}
 
       {/* ===== LEFT PANEL: Tasks ===== */}
-      <section class="tasks-panel">
+      <section
+        class="tasks-panel"
+        onClick$={(e) => {
+          const target = e.target as HTMLElement;
+          if (!target.closest(".task-menu-wrapper")) {
+            openMenuTaskId.value = null;
+          }
+        }}
+      >
         <div class="tasks-header">
           {/* List Tabs */}
           <div class="list-tabs">
@@ -596,7 +643,7 @@ export default component$(() => {
                   class="task-item"
                   onClick$={(e) => {
                     const target = e.target as HTMLElement;
-                    if (target.closest(".task-checkbox-wrapper")) return;
+                    if (target.closest(".task-checkbox-wrapper") || target.closest(".task-menu-wrapper")) return;
                     openEditModal(listId, task);
                   }}
                 >
@@ -645,6 +692,37 @@ export default component$(() => {
                       )}
                     </div>
                   </div>
+                  <div class={`task-menu-wrapper ${openMenuTaskId.value === task.id ? 'open' : ''}`}>
+                    <button
+                      class="task-menu-btn"
+                      onClick$={(e) => {
+                        e.stopPropagation();
+                        openMenuTaskId.value = openMenuTaskId.value === task.id ? null : task.id;
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <circle cx="12" cy="5" r="2" />
+                        <circle cx="12" cy="12" r="2" />
+                        <circle cx="12" cy="19" r="2" />
+                      </svg>
+                    </button>
+                    {openMenuTaskId.value === task.id && (
+                      <div class="task-menu-dropdown">
+                        <button
+                          class="task-menu-item danger"
+                          onClick$={(e) => {
+                            e.stopPropagation();
+                            deleteTask(listId, task.id);
+                          }}
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                          </svg>
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
 
@@ -657,7 +735,7 @@ export default component$(() => {
                       class="task-item completed"
                       onClick$={(e) => {
                         const target = e.target as HTMLElement;
-                        if (target.closest(".task-checkbox-wrapper")) return;
+                        if (target.closest(".task-checkbox-wrapper") || target.closest(".task-menu-wrapper")) return;
                         openEditModal(listId, task);
                       }}
                     >
@@ -674,6 +752,37 @@ export default component$(() => {
                       </div>
                       <div class="task-content">
                         <span class="task-title">{task.title}</span>
+                      </div>
+                      <div class={`task-menu-wrapper ${openMenuTaskId.value === task.id ? 'open' : ''}`}>
+                        <button
+                          class="task-menu-btn"
+                          onClick$={(e) => {
+                            e.stopPropagation();
+                            openMenuTaskId.value = openMenuTaskId.value === task.id ? null : task.id;
+                          }}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <circle cx="12" cy="5" r="2" />
+                            <circle cx="12" cy="12" r="2" />
+                            <circle cx="12" cy="19" r="2" />
+                          </svg>
+                        </button>
+                        {openMenuTaskId.value === task.id && (
+                          <div class="task-menu-dropdown">
+                            <button
+                              class="task-menu-item danger"
+                              onClick$={(e) => {
+                                e.stopPropagation();
+                                deleteTask(listId, task.id);
+                              }}
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                              </svg>
+                              Delete
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}

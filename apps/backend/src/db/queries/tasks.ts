@@ -192,6 +192,8 @@ export interface SchedulableTask {
   description: string | null;
   due_date: string | null;
   duration: number | null;
+  is_recurring: boolean;
+  recurring_days: DayOfWeek[] | null;
   events: Array<{
     id: string;
     date: string;
@@ -208,6 +210,8 @@ export async function getIncompleteTasks(db: DrizzleClient, userId: string): Pro
       description: tasks.description,
       due_date: tasks.due_date,
       duration: tasks.duration,
+      is_recurring: tasks.is_recurring,
+      recurring_days: tasks.recurring_days,
       events: sql<string>`COALESCE(
         json_group_array(
           CASE WHEN ${events.id} IS NOT NULL THEN
@@ -230,8 +234,7 @@ export async function getIncompleteTasks(db: DrizzleClient, userId: string): Pro
     .where(
       and(
         eq(tasks.user_id, userId),
-        eq(tasks.completed, false),
-        eq(tasks.is_recurring, false)
+        eq(tasks.completed, false)
       )
     )
     .groupBy(tasks.id)
@@ -243,6 +246,8 @@ export async function getIncompleteTasks(db: DrizzleClient, userId: string): Pro
     description: row.description,
     due_date: row.due_date,
     duration: row.duration,
+    is_recurring: row.is_recurring,
+    recurring_days: parseRecurringDays(row.recurring_days),
     events: JSON.parse(row.events) as SchedulableTask["events"],
   }));
 }

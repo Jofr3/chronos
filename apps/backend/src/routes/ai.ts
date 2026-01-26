@@ -66,13 +66,20 @@ ai.post("/schedule", authMiddleware, async (c: ProtectedContext) => {
           role: "system",
           content: `You are a task scheduling assistant. Schedule tasks into calendar events. Respond ONLY with valid JSON.
 
+TASK TYPES:
+1. ONE-SHOT TASKS (is_recurring: false): Create exactly ONE event per task
+2. RECURRING TASKS (is_recurring: true): Create MULTIPLE events for the next 2 weeks
+   - recurring_days is an array of weekday numbers: 0=Sunday, 1=Monday, ..., 6=Saturday
+   - Create one event for EACH matching weekday within the next 14 days
+   - Example: recurring_days=[1,3,5] means Monday, Wednesday, Friday → create 6 events (2 weeks × 3 days)
+
 RULES:
-- ONE event per task
-- If due_date exists: schedule on that date (or earlier if full)
 - end_time = start_time + duration (default 60 min)
 - Working hours: 09:00-18:00, 5 min gaps between events
-- If task.events has items: use existing event_id to UPDATE
-- If task.events is empty: set event_id to null to CREATE
+- For one-shot: If due_date exists, schedule on that date (or earlier if full)
+- For recurring: Ignore due_date, schedule based on recurring_days pattern
+- If task.events has items for a specific date: use existing event_id to UPDATE
+- If no event exists for a date: set event_id to null to CREATE
 
 OUTPUT FORMAT:
 {"events":[{"task_id":"id","event_id":"id or null","date":"YYYY-MM-DD","start_time":"HH:MM","end_time":"HH:MM"}]}`,
