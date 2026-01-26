@@ -189,67 +189,45 @@ export async function getAllTasksByUserId(db: DrizzleClient, userId: string): Pr
 export interface SchedulableTask {
   id: string;
   title: string;
-  description: string | null;
   due_date: string | null;
   duration: number | null;
-  is_recurring: boolean;
-  recurring_days: DayOfWeek[] | null;
-  events: Array<{
-    id: string;
-    date: string;
-    start_time: string;
-    end_time: string;
-  }>;
 }
 
-export async function getIncompleteTasks(db: DrizzleClient, userId: string): Promise<SchedulableTask[]> {
+/**
+ * Get tasks eligible for AI scheduling:
+ * - Not recurring (is_recurring = false)
+ * - Not completed (completed = false)
+ * - Not deleted (deleted_at is null)
+ * - Due date is within the last month or in the future (or no due date)
+ */
+export async function getSchedulableTasks(
+  db: DrizzleClient,
+  userId: string
+): Promise<SchedulableTask[]> {
+  const oneMonthAgo = new Date();
+  oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+  const oneMonthAgoStr = oneMonthAgo.toISOString().split("T")[0];
+
   const result = await db
     .select({
       id: tasks.id,
       title: tasks.title,
-      description: tasks.description,
       due_date: tasks.due_date,
       duration: tasks.duration,
-      is_recurring: tasks.is_recurring,
-      recurring_days: tasks.recurring_days,
-      events: sql<string>`COALESCE(
-        json_group_array(
-          CASE WHEN ${events.id} IS NOT NULL THEN
-            json_object(
-              'id', ${events.id},
-              'date', ${events.date},
-              'start_time', ${events.start_time},
-              'end_time', ${events.end_time}
-            )
-          END
-        ) FILTER (WHERE ${events.id} IS NOT NULL),
-        '[]'
-      )`.as("events"),
     })
     .from(tasks)
-    .leftJoin(
-      events,
-      and(eq(tasks.id, events.task_id), sql`${events.date} >= date('now')`)
-    )
     .where(
       and(
         eq(tasks.user_id, userId),
-        eq(tasks.completed, false)
+        eq(tasks.is_recurring, false),
+        eq(tasks.completed, false),
+        isNull(tasks.deleted_at),
+        sql`(${tasks.due_date} IS NULL OR ${tasks.due_date} >= ${oneMonthAgoStr})`
       )
     )
-    .groupBy(tasks.id)
-    .orderBy(asc(tasks.created_at));
+    .orderBy(asc(tasks.due_date));
 
-  return result.map((row) => ({
-    id: row.id,
-    title: row.title,
-    description: row.description,
-    due_date: row.due_date,
-    duration: row.duration,
-    is_recurring: row.is_recurring,
-    recurring_days: parseRecurringDays(row.recurring_days),
-    events: JSON.parse(row.events) as SchedulableTask["events"],
-  }));
+  return result;
 }
 
 export async function getTasksWithoutList(db: DrizzleClient, userId: string): Promise<Task[]> {

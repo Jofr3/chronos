@@ -3,6 +3,8 @@ import type { Task, TaskList, TaskListWithTasks, DayOfWeek } from "@chronos/type
 import * as taskQueries from "../db/queries/tasks";
 import type { SchedulableTask } from "../db/queries/tasks";
 
+export type { SchedulableTask };
+
 export class TaskService {
   constructor(private db: DrizzleClient) {}
 
@@ -14,10 +16,6 @@ export class TaskService {
 
   async getTasksWithoutList(userId: string): Promise<Task[]> {
     return taskQueries.getTasksWithoutList(this.db, userId);
-  }
-
-  async getIncompleteTasks(userId: string): Promise<SchedulableTask[]> {
-    return taskQueries.getIncompleteTasks(this.db, userId);
   }
 
   async getTaskList(listId: string, userId: string): Promise<TaskListWithTasks | null> {
@@ -107,5 +105,12 @@ export class TaskService {
     }
 
     return taskQueries.deleteTask(this.db, taskId);
+  }
+
+  /**
+   * Get tasks eligible for AI scheduling
+   */
+  async getSchedulableTasks(userId: string): Promise<SchedulableTask[]> {
+    return taskQueries.getSchedulableTasks(this.db, userId);
   }
 }

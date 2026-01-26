@@ -175,6 +175,20 @@ export async function deleteManyEvents(
   return deletedCount;
 }
 
+export async function getEventsByTaskIds(
+  db: DrizzleClient,
+  taskIds: string[]
+): Promise<Array<{ id: string; task_id: string }>> {
+  if (taskIds.length === 0) return [];
+
+  const result = await db
+    .select({ id: events.id, task_id: events.task_id })
+    .from(events)
+    .where(inArray(events.task_id, taskIds));
+
+  return result.map((row) => ({ id: row.id, task_id: row.task_id! }));
+}
+
 export async function updateEvent(
   db: DrizzleClient,
   eventId: string,

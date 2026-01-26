@@ -45,153 +45,230 @@ ai.post("/schedule", authMiddleware, async (c: ProtectedContext) => {
     const db = createDrizzleClient(c.env.DB);
     const taskService = new TaskService(db);
 
-    // Get all incomplete tasks for the user
-    const incompleteTasks = await taskService.getIncompleteTasks(userId);
+    // Get tasks eligible for scheduling
+    const tasks = await taskService.getSchedulableTasks(userId);
 
-    if (incompleteTasks.length === 0) {
-      return successResponse(c, {
-        message: "No incomplete tasks to schedule",
-        tasks: [],
-        events: [],
-      });
+    // Create ID mapping (fake ID -> real ID) and anonymize tasks for AI
+    const idMapping: Array<{ fake_id: string; real_id: string }> = [];
+    const anonymizedTasks = tasks.map((task, index) => {
+      const fake_id = `t${index}`;
+      idMapping.push({ fake_id, real_id: task.id });
+      return {
+        ...task,
+        id: fake_id,
+      };
+    });
+
+    // Generate available dates (today + 14 days)
+    const availableDates: string[] = [];
+    const today = new Date();
+    for (let i = 0; i < 14; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      availableDates.push(date.toISOString().split("T")[0]);
     }
 
-    const today = new Date().toISOString().split("T")[0];
-
-    let response;
+    // Call AI to schedule tasks
+    console.log("Calling AI with tasks:", anonymizedTasks.length);
+    let aiResponse;
     try {
-      response = await c.env.AI.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
-      messages: [
-        {
-          role: "system",
-          content: `You are a task scheduling assistant. Schedule tasks into calendar events. Respond ONLY with valid JSON.
+      aiResponse = await c.env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+        messages: [
+          {
+            role: "system",
+            content: `You are a task scheduling assistant. Respond ONLY with valid JSON.
+Return an object with a "scheduled" array containing objects with "task_id" and "date" fields.
+Example: {"scheduled": [{"task_id": "t0", "date": "2026-01-27"}]}`
+          },
+          {
+            role: "user",
+            content: `Schedule these tasks to appropriate dates.
 
-TASK TYPES:
-1. ONE-SHOT TASKS (is_recurring: false): Create exactly ONE event per task
-2. RECURRING TASKS (is_recurring: true): Create MULTIPLE events for the next 2 weeks
-   - recurring_days is an array of weekday numbers: 0=Sunday, 1=Monday, ..., 6=Saturday
-   - Create one event for EACH matching weekday within the next 14 days
-   - Example: recurring_days=[1,3,5] means Monday, Wednesday, Friday → create 6 events (2 weeks × 3 days)
+TASKS:
+${JSON.stringify(anonymizedTasks, null, 2)}
+
+AVAILABLE DATES:
+${JSON.stringify(availableDates)}
 
 RULES:
-- end_time = start_time + duration (default 60 min)
-- Working hours: 09:00-18:00, 5 min gaps between events
-- For one-shot: If due_date exists, schedule on that date (or earlier if full)
-- For recurring: Ignore due_date, schedule based on recurring_days pattern
-- If task.events has items for a specific date: use existing event_id to UPDATE
-- If no event exists for a date: set event_id to null to CREATE
+IMPORTANT: If a task has a due_date, schedule it ON that exact date
+- Only tasks with due_date: null can be scheduled on any available date
+- Spread tasks without due_date evenly across available dates
+- Schedule tasks only ONCE`
 
-OUTPUT FORMAT:
-{"events":[{"task_id":"id","event_id":"id or null","date":"YYYY-MM-DD","start_time":"HH:MM","end_time":"HH:MM"}]}`,
-        },
-        {
-          role: "user",
-          content: `Today: ${today}. Schedule:\n${JSON.stringify(incompleteTasks)}`,
-        },
-      ],
-      max_tokens: 2048,
-      response_format: {
-        type: "json_object",
-      },
-    });
+          }
+        ],
+        max_tokens: 512,
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            type: "object",
+            properties: {
+              scheduled: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    task_id: { type: "string" },
+                    date: { type: "string" }
+                  },
+                  required: ["task_id", "date"]
+                }
+              }
+            },
+            required: ["scheduled"]
+          }
+        }
+      });
+      console.log("AI response:", JSON.stringify(aiResponse));
     } catch (aiError) {
       console.error("AI call failed:", aiError);
-      return errorResponse(c, ErrorCodes.AI_ERROR, `AI call failed: ${aiError instanceof Error ? aiError.message : "Unknown error"}`, 500);
+      throw aiError;
     }
 
-    console.log("AI Response:", response);
-
-    // Parse the response
-    let parsed: {
-      events: Array<{
-        task_id: string;
-        event_id: string | null;
-        date: string;
-        start_time: string;
-        end_time: string;
-      }>;
-    };
-
+    // Parse AI response
+    let scheduledTasks: Array<{ task_id: string; date: string }> = [];
     try {
-      let responseText = typeof response === "string"
-        ? response
-        : (response as { response?: string }).response;
+      const response = (aiResponse as { response?: { scheduled?: Array<{ task_id: string; date: string }> } }).response;
+      scheduledTasks = response?.scheduled || [];
+    } catch (parseError) {
+      console.error("Failed to parse AI response:", aiResponse);
+    }
 
-      if (!responseText) {
-        console.error("Empty AI response:", response);
-        return errorResponse(c, ErrorCodes.AI_ERROR, "AI returned empty response", 500);
-      }
+    // Enrich scheduled tasks with duration info for time scheduling
+    const tasksWithDuration = scheduledTasks.map((scheduled) => {
+      const task = anonymizedTasks.find((t) => t.id === scheduled.task_id);
+      return {
+        ...scheduled,
+        title: task?.title || "",
+        duration: task?.duration || 60, // Default 60 minutes if not set
+      };
+    });
 
-      // Strip markdown code blocks if present
-      responseText = responseText.trim();
-      if (responseText.startsWith("```")) {
-        responseText = responseText.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-      }
+    // Second AI call: assign times within each day
+    console.log("Calling AI to assign times...");
+    let timeResponse;
+    try {
+      timeResponse = await c.env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+        messages: [
+          {
+            role: "system",
+            content: `You are a task scheduling assistant. Respond ONLY with valid JSON.
+Return an object with a "scheduled" array containing objects with "task_id", "date", "start_time", and "end_time" fields.
+Times should be in HH:MM format (24-hour). Schedule tasks between 09:00 and 18:00.
+Example: {"scheduled": [{"task_id": "t0", "date": "2026-01-27", "start_time": "09:00", "end_time": "10:00"}]}`
+          },
+          {
+            role: "user",
+            content: `Assign specific times to these scheduled tasks.
 
-      parsed = JSON.parse(responseText);
-      console.log("Parsed response:", parsed);
+TASKS WITH DATES:
+${JSON.stringify(tasksWithDuration, null, 2)}
 
-      if (!parsed.events || !Array.isArray(parsed.events)) {
-        console.error("Invalid response structure:", parsed);
-        return errorResponse(c, ErrorCodes.AI_ERROR, "AI response missing events array", 500);
+RULES:
+- Use the duration field (in minutes) to calculate end_time from start_time
+- Schedule tasks between 09:00 and 18:00
+- Avoid overlapping tasks on the same day
+- Leave small gaps between tasks when possible`
+          }
+        ],
+        max_tokens: 1024,
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            type: "object",
+            properties: {
+              scheduled: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    task_id: { type: "string" },
+                    date: { type: "string" },
+                    start_time: { type: "string" },
+                    end_time: { type: "string" }
+                  },
+                  required: ["task_id", "date", "start_time", "end_time"]
+                }
+              }
+            },
+            required: ["scheduled"]
+          }
+        }
+      });
+      console.log("Time response:", JSON.stringify(timeResponse));
+    } catch (aiError) {
+      console.error("Time scheduling AI call failed:", aiError);
+      throw aiError;
+    }
+
+    // Parse time scheduling response
+    let finalSchedule: Array<{ task_id: string; date: string; start_time: string; end_time: string }> = [];
+    try {
+      const rawResponse = (timeResponse as { response?: string | { scheduled?: Array<{ task_id: string; date: string; start_time: string; end_time: string }> } }).response;
+
+      // Handle both string and object responses
+      if (typeof rawResponse === "string") {
+        const parsed = JSON.parse(rawResponse);
+        finalSchedule = parsed.scheduled || [];
+      } else {
+        finalSchedule = rawResponse?.scheduled || [];
       }
     } catch (parseError) {
-      console.error("JSON parse error:", parseError, "Response:", response);
-      return errorResponse(c, ErrorCodes.AI_ERROR, "Failed to parse AI response as JSON", 500);
+      console.error("Failed to parse time response:", timeResponse);
     }
 
-    const validEvents = parsed.events;
+    // Map fake IDs back to real IDs
+    const result = finalSchedule.map((scheduled) => {
+      const mapping = idMapping.find((m) => m.fake_id === scheduled.task_id);
+      return {
+        task_id: mapping?.real_id || scheduled.task_id,
+        date: scheduled.date,
+        start_time: scheduled.start_time,
+        end_time: scheduled.end_time,
+      };
+    });
 
-    // Create or update events in the database
-    const createdEvents = [];
-    const updatedEvents = [];
-    const errors = [];
+    // Get existing events for scheduled tasks
+    const taskIds = result.map((r) => r.task_id);
+    const existingEvents = await eventQueries.getEventsByTaskIds(db, taskIds);
+    const existingEventMap = new Map(existingEvents.map((e) => [e.task_id, e.id]));
 
-    for (const event of validEvents) {
-      try {
-        if (event.event_id) {
-          // Update existing event
-          const updated = await eventQueries.updateEvent(
-            db,
-            event.event_id,
-            userId,
-            {
-              date: event.date,
-              start_time: event.start_time,
-              end_time: event.end_time,
-            }
-          );
-          if (updated) {
-            updatedEvents.push(updated);
-          }
-        } else {
-          // Create new event
-          const eventId = crypto.randomUUID();
-          const created = await eventQueries.createEvent(
-            db,
-            eventId,
-            userId,
-            event.task_id,
-            event.date,
-            event.start_time,
-            event.end_time
-          );
-          createdEvents.push(created);
-        }
-      } catch (eventError) {
-        console.error("Error processing event:", event, eventError);
-        errors.push({
-          event,
-          error: eventError instanceof Error ? eventError.message : "Unknown error",
+    // Create or update events
+    const createdEvents: Awaited<ReturnType<typeof eventQueries.createEvent>>[] = [];
+    const updatedEvents: Awaited<ReturnType<typeof eventQueries.updateEvent>>[] = [];
+
+    for (const scheduled of result) {
+      const existingEventId = existingEventMap.get(scheduled.task_id);
+
+      if (existingEventId) {
+        // Update existing event
+        const updated = await eventQueries.updateEvent(db, existingEventId, userId, {
+          date: scheduled.date,
+          start_time: scheduled.start_time,
+          end_time: scheduled.end_time,
         });
+        if (updated) updatedEvents.push(updated);
+      } else {
+        // Create new event
+        const eventId = crypto.randomUUID();
+        const created = await eventQueries.createEvent(
+          db,
+          eventId,
+          userId,
+          scheduled.task_id,
+          scheduled.date,
+          scheduled.start_time,
+          scheduled.end_time
+        );
+        createdEvents.push(created);
       }
     }
 
     return successResponse(c, {
-      tasks: incompleteTasks,
-      created: createdEvents,
-      updated: updatedEvents,
-      errors: errors.length > 0 ? errors : undefined,
+      scheduled: result,
+      created: createdEvents.length,
+      updated: updatedEvents.length,
     });
   } catch (error) {
     return handleError(c, error, "schedule tasks");
