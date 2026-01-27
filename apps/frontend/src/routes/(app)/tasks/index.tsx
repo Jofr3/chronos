@@ -312,6 +312,13 @@ export default component$(() => {
       if (result.success) {
         scheduleMessage.value = result.message || "Tasks scheduled!";
         await loadEvents();
+        // Refresh tasks to reflect updated due dates
+        const [allLists, tasksNoList] = await Promise.all([
+          taskService.getAllTaskLists(),
+          taskService.getTasksWithoutList(),
+        ]);
+        lists.value = allLists;
+        tasksWithoutList.value = tasksNoList;
       } else {
         scheduleMessage.value = result.error?.message || "Failed to schedule";
       }

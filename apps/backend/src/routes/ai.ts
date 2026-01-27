@@ -39,7 +39,7 @@ ai.post("/chat", async (c) => {
 });
 
 // POST /api/ai/schedule - AI-powered task scheduling (protected)
-ai.post("/schedule", authMiddleware, async (c: ProtectedContext) => {
+ai.post("/schedule_old", authMiddleware, async (c: ProtectedContext) => {
   try {
     const userId = getAuthUserId(c);
     const db = createDrizzleClient(c.env.DB);
@@ -275,7 +275,7 @@ RULES:
   }
 });
 
-ai.post("/schedule_new", authMiddleware, async (c: ProtectedContext) => {
+ai.post("/schedule", authMiddleware, async (c: ProtectedContext) => {
   try {
     const userId = getAuthUserId(c);
     const db = createDrizzleClient(c.env.DB);
@@ -295,14 +295,26 @@ ai.post("/schedule_new", authMiddleware, async (c: ProtectedContext) => {
 
     // Create ID mapping (fake ID -> real ID) and anonymize tasks for AI
     const idMapping: Array<{ fake_id: string; real_id: string }> = [];
+    const todayStr = allAvailableDates[0]; // First date is today
     const anonymizedTasks = tasks.map((task, index) => {
       const fake_id = `t${index}`;
       idMapping.push({ fake_id, real_id: task.id });
 
       // Determine available dates for this task
-      const available_dates = task.due_date
-        ? [task.due_date] // Task with due_date can only be scheduled on that date
-        : allAvailableDates; // Task without due_date can be scheduled on any date
+      let available_dates: string[];
+      if (!task.due_date) {
+        // Task without due_date can be scheduled on any date
+        available_dates = allAvailableDates;
+      } else if (task.due_date < todayStr) {
+        // Task with past due_date is overdue - allow scheduling on any available date
+        available_dates = allAvailableDates;
+      } else if (allAvailableDates.includes(task.due_date)) {
+        // Task with due_date within the scheduling window
+        available_dates = [task.due_date];
+      } else {
+        // Task with due_date beyond the scheduling window - schedule on any available date
+        available_dates = allAvailableDates;
+      }
 
       return {
         id: fake_id,
@@ -434,6 +446,11 @@ RULES:
         );
         createdEvents.push(created);
       }
+
+      // Update the task's due_date to match the scheduled date
+      await taskService.updateTask(scheduled.task_id, userId, {
+        due_date: scheduled.date,
+      });
     }
 
     return successResponse(c, {
