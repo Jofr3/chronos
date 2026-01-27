@@ -9,6 +9,10 @@
     "context7": {
       "command": "bunx",
       "args": ["-y", "@upstash/context7-mcp", "--api-key", "${CONTEXT7_API_KEY}"]
+    },
+    "tmux": {
+      "command": "bunx",
+      "args": ["-y", "tmux-mcp", "--shell-type=fish"]
     }
   }
 }

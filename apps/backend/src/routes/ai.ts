@@ -72,7 +72,7 @@ ai.post("/schedule", authMiddleware, async (c: ProtectedContext) => {
     console.log("Calling AI with tasks:", anonymizedTasks.length);
     let aiResponse;
     try {
-      aiResponse = await c.env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+      aiResponse = await c.env.AI.run("@cf/qwen/qwq-32b", {
         messages: [
           {
             role: "system",
@@ -149,7 +149,7 @@ IMPORTANT: If a task has a due_date, schedule it ON that exact date
     console.log("Calling AI to assign times...");
     let timeResponse;
     try {
-      timeResponse = await c.env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+      timeResponse = await c.env.AI.run("@cf/qwen/qwq-32b", {
         messages: [
           {
             role: "system",
@@ -220,6 +220,177 @@ RULES:
 
     // Map fake IDs back to real IDs
     const result = finalSchedule.map((scheduled) => {
+      const mapping = idMapping.find((m) => m.fake_id === scheduled.task_id);
+      return {
+        task_id: mapping?.real_id || scheduled.task_id,
+        date: scheduled.date,
+        start_time: scheduled.start_time,
+        end_time: scheduled.end_time,
+      };
+    });
+
+    // Get existing events for scheduled tasks
+    const taskIds = result.map((r) => r.task_id);
+    const existingEvents = await eventQueries.getEventsByTaskIds(db, taskIds);
+    const existingEventMap = new Map(existingEvents.map((e) => [e.task_id, e.id]));
+
+    // Create or update events
+    const createdEvents: Awaited<ReturnType<typeof eventQueries.createEvent>>[] = [];
+    const updatedEvents: Awaited<ReturnType<typeof eventQueries.updateEvent>>[] = [];
+
+    for (const scheduled of result) {
+      const existingEventId = existingEventMap.get(scheduled.task_id);
+
+      if (existingEventId) {
+        // Update existing event
+        const updated = await eventQueries.updateEvent(db, existingEventId, userId, {
+          date: scheduled.date,
+          start_time: scheduled.start_time,
+          end_time: scheduled.end_time,
+        });
+        if (updated) updatedEvents.push(updated);
+      } else {
+        // Create new event
+        const eventId = crypto.randomUUID();
+        const created = await eventQueries.createEvent(
+          db,
+          eventId,
+          userId,
+          scheduled.task_id,
+          scheduled.date,
+          scheduled.start_time,
+          scheduled.end_time
+        );
+        createdEvents.push(created);
+      }
+    }
+
+    return successResponse(c, {
+      scheduled: result,
+      created: createdEvents.length,
+      updated: updatedEvents.length,
+    });
+  } catch (error) {
+    return handleError(c, error, "schedule tasks");
+  }
+});
+
+ai.post("/schedule_new", authMiddleware, async (c: ProtectedContext) => {
+  try {
+    const userId = getAuthUserId(c);
+    const db = createDrizzleClient(c.env.DB);
+    const taskService = new TaskService(db);
+
+    // Get tasks eligible for scheduling
+    const tasks = await taskService.getSchedulableTasks(userId);
+
+    // Generate available dates (today + 14 days)
+    const allAvailableDates: string[] = [];
+    const today = new Date();
+    for (let i = 0; i < 14; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      allAvailableDates.push(date.toISOString().split("T")[0]);
+    }
+
+    // Create ID mapping (fake ID -> real ID) and anonymize tasks for AI
+    const idMapping: Array<{ fake_id: string; real_id: string }> = [];
+    const anonymizedTasks = tasks.map((task, index) => {
+      const fake_id = `t${index}`;
+      idMapping.push({ fake_id, real_id: task.id });
+
+      // Determine available dates for this task
+      const available_dates = task.due_date
+        ? [task.due_date] // Task with due_date can only be scheduled on that date
+        : allAvailableDates; // Task without due_date can be scheduled on any date
+
+      return {
+        id: fake_id,
+        title: task.title,
+        duration: task.duration,
+        available_dates,
+      };
+    });
+
+    // Call AI to schedule tasks
+    console.log("Calling AI with tasks:", anonymizedTasks.length);
+    let aiResponse;
+    try {
+      aiResponse = await c.env.AI.run("@cf/qwen/qwq-32b", {
+      // aiResponse = await c.env.AI.run("@cf/openai/gpt-oss-120b", {
+        messages: [
+          {
+            role: "system",
+            content: `You are a task scheduling assistant. Respond ONLY with valid JSON.
+Return an object with a "scheduled" array containing objects with "task_id", "date", "start_time", and "end_time" fields.
+Times should be in HH:MM format (24-hour). Schedule tasks between 09:00 and 18:00.
+Example: {"scheduled": [{"task_id": "t0", "date": "2026-01-27", "start_time": "09:00", "end_time": "10:00"}]}`
+          },
+          {
+            role: "user",
+            content: `Schedule these tasks to appropriate dates and times.
+
+TASKS:
+${JSON.stringify(anonymizedTasks, null, 2)}
+
+RULES:
+- Each task has an available_dates array - you MUST schedule the task on one of those dates
+- Use the duration field (in minutes) to calculate end_time from start_time
+- Schedule tasks between 09:00 and 18:00
+- Avoid overlapping tasks on the same day
+- Spread tasks evenly across available dates
+- Leave a 5 minute gap between tasks when possible
+- Schedule each task only ONCE`
+          }
+        ],
+        max_tokens: 1024,
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            type: "object",
+            properties: {
+              scheduled: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    task_id: { type: "string" },
+                    date: { type: "string" },
+                    start_time: { type: "string" },
+                    end_time: { type: "string" }
+                  },
+                  required: ["task_id", "date", "start_time", "end_time"]
+                }
+              }
+            },
+            required: ["scheduled"]
+          }
+        }
+      });
+      console.log("AI response:", JSON.stringify(aiResponse));
+    } catch (aiError) {
+      console.error("AI call failed:", aiError);
+      throw aiError;
+    }
+
+    // Parse AI response
+    let scheduledTasks: Array<{ task_id: string; date: string; start_time: string; end_time: string }> = [];
+    try {
+      const rawResponse = (aiResponse as { response?: string | { scheduled?: Array<{ task_id: string; date: string; start_time: string; end_time: string }> } }).response;
+
+      // Handle both string and object responses
+      if (typeof rawResponse === "string") {
+        const parsed = JSON.parse(rawResponse);
+        scheduledTasks = parsed.scheduled || [];
+      } else {
+        scheduledTasks = rawResponse?.scheduled || [];
+      }
+    } catch (parseError) {
+      console.error("Failed to parse AI response:", aiResponse);
+    }
+
+    // Map fake IDs back to real IDs
+    const result = scheduledTasks.map((scheduled) => {
       const mapping = idMapping.find((m) => m.fake_id === scheduled.task_id);
       return {
         task_id: mapping?.real_id || scheduled.task_id,
