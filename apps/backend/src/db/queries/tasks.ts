@@ -191,14 +191,16 @@ export interface SchedulableTask {
   title: string;
   due_date: string | null;
   duration: number | null;
+  is_recurring: boolean;
+  recurring_days: DayOfWeek[] | null;
 }
 
 /**
  * Get tasks eligible for AI scheduling:
- * - Not recurring (is_recurring = false)
  * - Not completed (completed = false)
  * - Not deleted (deleted_at is null)
- * - Due date is within the last month or in the future (or no due date)
+ * - For non-recurring tasks: due date is within the last month or in the future (or no due date)
+ * - Recurring tasks are always included (they use recurring_days for scheduling)
  */
 export async function getSchedulableTasks(
   db: DrizzleClient,
@@ -214,20 +216,29 @@ export async function getSchedulableTasks(
       title: tasks.title,
       due_date: tasks.due_date,
       duration: tasks.duration,
+      is_recurring: tasks.is_recurring,
+      recurring_days: tasks.recurring_days,
     })
     .from(tasks)
     .where(
       and(
         eq(tasks.user_id, userId),
-        eq(tasks.is_recurring, false),
         eq(tasks.completed, false),
         isNull(tasks.deleted_at),
-        sql`(${tasks.due_date} IS NULL OR ${tasks.due_date} >= ${oneMonthAgoStr})`
+        // For non-recurring tasks, filter by due_date; recurring tasks are always included
+        sql`(${tasks.is_recurring} = 1 OR ${tasks.due_date} IS NULL OR ${tasks.due_date} >= ${oneMonthAgoStr})`
       )
     )
     .orderBy(asc(tasks.due_date));
 
-  return result;
+  return result.map((row) => ({
+    id: row.id,
+    title: row.title,
+    due_date: row.due_date,
+    duration: row.duration,
+    is_recurring: row.is_recurring,
+    recurring_days: parseRecurringDays(row.recurring_days),
+  }));
 }
 
 export async function getTasksWithoutList(db: DrizzleClient, userId: string): Promise<Task[]> {

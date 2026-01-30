@@ -293,21 +293,42 @@ ai.post("/schedule", authMiddleware, async (c: ProtectedContext) => {
       allAvailableDates.push(date.toISOString().split("T")[0]);
     }
 
+    // Helper function to get dates matching specific days of week within the 14-day window
+    const getDatesForRecurringDays = (recurringDays: number[]): string[] => {
+      const matchingDates: string[] = [];
+      for (const dateStr of allAvailableDates) {
+        const date = new Date(dateStr + "T00:00:00");
+        const dayOfWeek = date.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+        if (recurringDays.includes(dayOfWeek)) {
+          matchingDates.push(dateStr);
+        }
+      }
+      return matchingDates;
+    };
+
     // Create ID mapping (fake ID -> real ID) and anonymize tasks for AI
-    const idMapping: Array<{ fake_id: string; real_id: string }> = [];
+    const idMapping: Array<{ fake_id: string; real_id: string; is_recurring: boolean }> = [];
     const todayStr = allAvailableDates[0]; // First date is today
     const anonymizedTasks = tasks.map((task, index) => {
       const fake_id = `t${index}`;
-      idMapping.push({ fake_id, real_id: task.id });
+      idMapping.push({ fake_id, real_id: task.id, is_recurring: task.is_recurring });
 
       // Determine available dates for this task
       let available_dates: string[];
-      if (!task.due_date) {
-        // Task without due_date can be scheduled on any date
+
+      if (task.is_recurring && task.recurring_days && task.recurring_days.length > 0) {
+        // Recurring task: get all dates within the 14-day window that match the recurring days
+        available_dates = getDatesForRecurringDays(task.recurring_days);
+        // If no matching dates found, fall back to all available dates
+        if (available_dates.length === 0) {
+          available_dates = allAvailableDates;
+        }
+      } else if (!task.due_date) {
+        // Non-recurring task without due_date can be scheduled on any date
         available_dates = allAvailableDates;
       } else if (task.due_date < todayStr) {
-        // Task with past due_date is overdue - allow scheduling on any available date
-        available_dates = allAvailableDates;
+        // Task with past due_date is overdue - prioritize today, AI will move to later date if full
+        available_dates = [todayStr];
       } else if (allAvailableDates.includes(task.due_date)) {
         // Task with due_date within the scheduling window
         available_dates = [task.due_date];
@@ -316,16 +337,30 @@ ai.post("/schedule", authMiddleware, async (c: ProtectedContext) => {
         available_dates = allAvailableDates;
       }
 
-      return {
+      const taskObj: {
+        id: string;
+        title: string;
+        duration: number | null;
+        available_dates: string[];
+        is_recurring?: boolean;
+      } = {
         id: fake_id,
         title: task.title,
         duration: task.duration,
         available_dates,
       };
+
+      // Only include is_recurring if true to avoid confusing the AI
+      if (task.is_recurring) {
+        taskObj.is_recurring = true;
+      }
+
+      return taskObj;
     });
 
+
     // Call AI to schedule tasks
-    console.log("Calling AI with tasks:", anonymizedTasks.length);
+    console.log("Calling AI with tasks:", anonymizedTasks);
     let aiResponse;
     try {
       aiResponse = await c.env.AI.run("@cf/qwen/qwq-32b", {
@@ -350,9 +385,10 @@ RULES:
 - Use the duration field (in minutes) to calculate end_time from start_time
 - Schedule tasks between 09:00 and 18:00
 - Avoid overlapping tasks on the same day
-- Spread tasks evenly across available dates
+- IMPORTANT: Pack as many tasks as possible into the same day before using the next day. Fill up each day's schedule (09:00-18:00) before moving to another date
+- For tasks with is_recurring=true: pick ONE date and assign a time. CRITICAL: This time slot will be blocked on ALL dates in that task's available_dates array. Other tasks must NOT use overlapping times on ANY of those dates
 - Leave a 5 minute gap between tasks when possible
-- Schedule each task only ONCE`
+- Schedule each task only ONCE in your response`
           }
         ],
         max_tokens: 1024,
@@ -401,28 +437,51 @@ RULES:
       console.error("Failed to parse AI response:", aiResponse);
     }
 
-    // Map fake IDs back to real IDs
-    const result = scheduledTasks.map((scheduled) => {
+    // Map fake IDs back to real IDs and expand recurring tasks to all their available dates
+    const result: Array<{ task_id: string; date: string; start_time: string; end_time: string }> = [];
+
+    for (const scheduled of scheduledTasks) {
       const mapping = idMapping.find((m) => m.fake_id === scheduled.task_id);
-      return {
-        task_id: mapping?.real_id || scheduled.task_id,
-        date: scheduled.date,
-        start_time: scheduled.start_time,
-        end_time: scheduled.end_time,
-      };
-    });
+      const realTaskId = mapping?.real_id || scheduled.task_id;
+      const isRecurring = mapping?.is_recurring || false;
+
+      if (isRecurring) {
+        // For recurring tasks, create events for ALL available dates with the same time
+        const taskData = anonymizedTasks.find((t) => t.id === scheduled.task_id);
+        const availableDates = taskData?.available_dates || [scheduled.date];
+
+        for (const date of availableDates) {
+          result.push({
+            task_id: realTaskId,
+            date,
+            start_time: scheduled.start_time,
+            end_time: scheduled.end_time,
+          });
+        }
+      } else {
+        // Non-recurring tasks: single event
+        result.push({
+          task_id: realTaskId,
+          date: scheduled.date,
+          start_time: scheduled.start_time,
+          end_time: scheduled.end_time,
+        });
+      }
+    }
 
     // Get existing events for scheduled tasks
-    const taskIds = result.map((r) => r.task_id);
+    const taskIds = [...new Set(result.map((r) => r.task_id))];
     const existingEvents = await eventQueries.getEventsByTaskIds(db, taskIds);
-    const existingEventMap = new Map(existingEvents.map((e) => [e.task_id, e.id]));
+    // Map by task_id + date to handle recurring tasks with multiple events
+    const existingEventMap = new Map(existingEvents.map((e) => [`${e.task_id}:${e.date}`, e.id]));
 
     // Create or update events
     const createdEvents: Awaited<ReturnType<typeof eventQueries.createEvent>>[] = [];
     const updatedEvents: Awaited<ReturnType<typeof eventQueries.updateEvent>>[] = [];
 
     for (const scheduled of result) {
-      const existingEventId = existingEventMap.get(scheduled.task_id);
+      const eventKey = `${scheduled.task_id}:${scheduled.date}`;
+      const existingEventId = existingEventMap.get(eventKey);
 
       if (existingEventId) {
         // Update existing event
@@ -446,11 +505,22 @@ RULES:
         );
         createdEvents.push(created);
       }
+    }
 
-      // Update the task's due_date to match the scheduled date
-      await taskService.updateTask(scheduled.task_id, userId, {
-        due_date: scheduled.date,
-      });
+    // Update task due_dates (only for non-recurring tasks, once per task)
+    const processedTaskIds = new Set<string>();
+    for (const scheduled of scheduledTasks) {
+      const mapping = idMapping.find((m) => m.fake_id === scheduled.task_id);
+      const realTaskId = mapping?.real_id || scheduled.task_id;
+      const isRecurring = mapping?.is_recurring || false;
+
+      // Only update due_date for non-recurring tasks
+      if (!isRecurring && !processedTaskIds.has(realTaskId)) {
+        processedTaskIds.add(realTaskId);
+        await taskService.updateTask(realTaskId, userId, {
+          due_date: scheduled.date,
+        });
+      }
     }
 
     return successResponse(c, {

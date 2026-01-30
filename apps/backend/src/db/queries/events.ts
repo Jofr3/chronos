@@ -178,15 +178,15 @@ export async function deleteManyEvents(
 export async function getEventsByTaskIds(
   db: DrizzleClient,
   taskIds: string[]
-): Promise<Array<{ id: string; task_id: string }>> {
+): Promise<Array<{ id: string; task_id: string; date: string }>> {
   if (taskIds.length === 0) return [];
 
   const result = await db
-    .select({ id: events.id, task_id: events.task_id })
+    .select({ id: events.id, task_id: events.task_id, date: events.date })
     .from(events)
     .where(inArray(events.task_id, taskIds));
 
-  return result.map((row) => ({ id: row.id, task_id: row.task_id! }));
+  return result.map((row) => ({ id: row.id, task_id: row.task_id!, date: row.date }));
 }
 
 export async function updateEvent(
