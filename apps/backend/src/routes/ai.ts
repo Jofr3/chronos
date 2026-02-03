@@ -475,17 +475,45 @@ RULES:
     // Map by task_id + date to handle recurring tasks with multiple events
     const existingEventMap = new Map(existingEvents.map((e) => [`${e.task_id}:${e.date}`, e.id]));
 
+    // For one-shot tasks: map task_id -> event id for events from today onward
+    const currentOneShotEventMap = new Map<string, string>();
+    for (const event of existingEvents) {
+      const mapping = idMapping.find((m) => m.real_id === event.task_id);
+      const isRecurring = mapping?.is_recurring || false;
+      // Only track non-recurring tasks with events from today or future
+      if (!isRecurring && event.date >= todayStr && !currentOneShotEventMap.has(event.task_id)) {
+        currentOneShotEventMap.set(event.task_id, event.id);
+      }
+    }
+
     // Create or update events
     const createdEvents: Awaited<ReturnType<typeof eventQueries.createEvent>>[] = [];
     const updatedEvents: Awaited<ReturnType<typeof eventQueries.updateEvent>>[] = [];
+
+    // Track which current one-shot events have been updated
+    const usedCurrentOneShotEvents = new Set<string>();
 
     for (const scheduled of result) {
       const eventKey = `${scheduled.task_id}:${scheduled.date}`;
       const existingEventId = existingEventMap.get(eventKey);
 
+      // Check if this is a non-recurring task
+      const mapping = idMapping.find((m) => m.real_id === scheduled.task_id);
+      const isRecurring = mapping?.is_recurring || false;
+
       if (existingEventId) {
-        // Update existing event
+        // Update existing event (same task + date)
         const updated = await eventQueries.updateEvent(db, existingEventId, userId, {
+          date: scheduled.date,
+          start_time: scheduled.start_time,
+          end_time: scheduled.end_time,
+        });
+        if (updated) updatedEvents.push(updated);
+      } else if (!isRecurring && currentOneShotEventMap.has(scheduled.task_id) && !usedCurrentOneShotEvents.has(scheduled.task_id)) {
+        // For one-shot tasks with a current/future event, update that event to the new date
+        const existingEventIdForTask = currentOneShotEventMap.get(scheduled.task_id)!;
+        usedCurrentOneShotEvents.add(scheduled.task_id);
+        const updated = await eventQueries.updateEvent(db, existingEventIdForTask, userId, {
           date: scheduled.date,
           start_time: scheduled.start_time,
           end_time: scheduled.end_time,
