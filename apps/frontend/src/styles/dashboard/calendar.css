@@ -363,3 +363,16 @@
     border: 1px solid #fecaca;
   }
 }
+
+/* Constraint Zone Background Events */
+.constraint-zone {
+  opacity: 1 !important;
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(239, 68, 68, 0.08),
+    rgba(239, 68, 68, 0.08) 4px,
+    rgba(239, 68, 68, 0.15) 4px,
+    rgba(239, 68, 68, 0.15) 8px
+  ) !important;
+  border-left: 3px solid rgba(239, 68, 68, 0.4) !important;
+}

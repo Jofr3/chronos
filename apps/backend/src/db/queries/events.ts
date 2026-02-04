@@ -189,6 +189,29 @@ export async function getEventsByTaskIds(
   return result.map((row) => ({ id: row.id, task_id: row.task_id!, date: row.date }));
 }
 
+export async function deleteEventsByTaskIds(
+  db: DrizzleClient,
+  taskIds: string[],
+  userId: string,
+  fromDate?: string
+): Promise<number> {
+  if (taskIds.length === 0) return 0;
+
+  const conditions = [inArray(events.task_id, taskIds), eq(events.user_id, userId)];
+
+  // Only delete events from the specified date onward (preserves historical events)
+  if (fromDate) {
+    conditions.push(gte(events.date, fromDate));
+  }
+
+  const result = await db
+    .delete(events)
+    .where(and(...conditions))
+    .returning();
+
+  return result.length;
+}
+
 export async function updateEvent(
   db: DrizzleClient,
   eventId: string,

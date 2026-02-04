@@ -131,6 +131,28 @@
   white-space: nowrap;
 }
 
+.user-popup-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  color: var(--n-text);
+  text-decoration: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.1s;
+  margin-bottom: 6px;
+
+  &:hover {
+    background: var(--n-hover);
+  }
+
+  svg {
+    color: var(--n-text-light);
+  }
+}
+
 .user-popup-logout {
   display: flex;
   align-items: center;

@@ -8,9 +8,10 @@ import {
   type NoSerialize,
 } from "@builder.io/qwik";
 import type { DocumentHead } from "@builder.io/qwik-city";
-import type { TaskListWithTasks, Task, DayOfWeek, Event } from "@chronos/types";
+import type { TaskListWithTasks, Task, DayOfWeek, Event, TimeConstraint } from "@chronos/types";
 import { taskService } from "~/services/task.service";
 import { getEvents, createEvent, updateEvent } from "~/services/event.service";
+import { constraintService } from "~/services/constraint.service";
 import { getApiBaseUrl } from "~/config/env";
 import { Calendar } from "@fullcalendar/core";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -41,10 +42,11 @@ export default component$(() => {
   // ===== CALENDAR STATE =====
   const calendarRef = useSignal<HTMLDivElement>();
   const calendarInstance = useSignal<NoSerialize<Calendar>>();
-  const currentView = useSignal("dayGridMonth");
+  const currentView = useSignal("timeGridWeek");
   const calendarTitle = useSignal("");
   const isScheduling = useSignal(false);
   const scheduleMessage = useSignal<string>("");
+  const constraints = useSignal<TimeConstraint[]>([]);
 
   // Event creation modal state
   const createEventModal = useSignal({
@@ -139,7 +141,12 @@ export default component$(() => {
 
   const loadEvents = $(async () => {
     try {
-      const events = await getEvents();
+      const [events, constraintList] = await Promise.all([
+        getEvents(),
+        constraintService.getAllConstraints(),
+      ]);
+      constraints.value = constraintList;
+
       const calendarEvents = events.map((event: Event) => ({
         id: event.id,
         title: event.title,
@@ -149,9 +156,68 @@ export default component$(() => {
           task_id: event.task_id,
         },
       }));
+
       if (calendarInstance.value) {
+        // Get visible date range (extend by a month on each side for smooth scrolling)
+        const view = calendarInstance.value.view;
+        const startDate = new Date(view.activeStart);
+        startDate.setDate(startDate.getDate() - 30);
+        const endDate = new Date(view.activeEnd);
+        endDate.setDate(endDate.getDate() + 30);
+
+        // Generate constraint background events
+        const constraintEvents: Array<{
+          id: string;
+          title: string;
+          start: string;
+          end: string;
+          display: string;
+          backgroundColor: string;
+          borderColor: string;
+          classNames: string[];
+        }> = [];
+
+        for (const constraint of constraintList) {
+          if (constraint.is_recurring && constraint.recurring_days) {
+            // Generate events for each matching day in the date range
+            const current = new Date(startDate);
+            while (current <= endDate) {
+              const dayOfWeek = current.getDay();
+              if (constraint.recurring_days.includes(dayOfWeek as DayOfWeek)) {
+                const dateStr = current.toISOString().split("T")[0];
+                constraintEvents.push({
+                  id: `constraint-${constraint.id}-${dateStr}`,
+                  title: constraint.name,
+                  start: `${dateStr}T${constraint.start_time}`,
+                  end: `${dateStr}T${constraint.end_time}`,
+                  display: "background",
+                  backgroundColor: "rgba(239, 68, 68, 0.15)",
+                  borderColor: "transparent",
+                  classNames: ["constraint-zone"],
+                });
+              }
+              current.setDate(current.getDate() + 1);
+            }
+          } else if (constraint.date) {
+            // One-time constraint
+            const constraintDate = new Date(constraint.date);
+            if (constraintDate >= startDate && constraintDate <= endDate) {
+              constraintEvents.push({
+                id: `constraint-${constraint.id}`,
+                title: constraint.name,
+                start: `${constraint.date}T${constraint.start_time}`,
+                end: `${constraint.date}T${constraint.end_time}`,
+                display: "background",
+                backgroundColor: "rgba(239, 68, 68, 0.15)",
+                borderColor: "transparent",
+                classNames: ["constraint-zone"],
+              });
+            }
+          }
+        }
+
         calendarInstance.value.removeAllEvents();
-        calendarInstance.value.addEventSource(calendarEvents);
+        calendarInstance.value.addEventSource([...calendarEvents, ...constraintEvents]);
       }
     } catch (err) {
       console.error("Failed to load events:", err);

@@ -128,3 +128,38 @@ export type NewTask = typeof tasks.$inferInsert;
 
 export type Event = typeof events.$inferSelect;
 export type NewEvent = typeof events.$inferInsert;
+
+/**
+ * Time Constraints table (Constraint Zones)
+ * Represents time blocks where AI cannot schedule tasks
+ */
+export const timeConstraints = sqliteTable(
+  "time_constraints",
+  {
+    id: text("id").primaryKey(),
+    user_id: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    start_time: text("start_time").notNull(), // Time in HH:MM format
+    end_time: text("end_time").notNull(), // Time in HH:MM format
+    date: text("date"), // ISO date string (YYYY-MM-DD) for one-time constraints, NULL for recurring
+    is_recurring: integer("is_recurring", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    recurring_days: text("recurring_days"), // JSON string: "[0,1,2,3,4,5,6]" for recurring constraints
+    created_at: text("created_at")
+      .notNull()
+      .default(sql`(datetime('now'))`),
+    updated_at: text("updated_at")
+      .notNull()
+      .default(sql`(datetime('now'))`),
+    deleted_at: text("deleted_at"),
+  },
+  (table) => ({
+    userIdIdx: index("idx_time_constraints_user_id").on(table.user_id),
+  })
+);
+
+export type TimeConstraint = typeof timeConstraints.$inferSelect;
+export type NewTimeConstraint = typeof timeConstraints.$inferInsert;

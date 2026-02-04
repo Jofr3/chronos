@@ -21,11 +21,14 @@ Chronos is a full-stack task management and calendar application built as a Bun 
 # Install dependencies
 bun install
 
+# Optional: Use Nix for reproducible environment
+nix develop
+
 # Development (runs all workspaces)
 bun dev
 
 # Run specific workspace
-bun --filter @chronos/backend dev      # Backend on http://localhost:3000
+bun --filter @chronos/backend dev      # Backend on http://localhost:8787
 bun --filter @chronos/frontend dev     # Frontend on http://localhost:5173
 
 # Build
@@ -36,9 +39,9 @@ bun --filter @chronos/frontend build
 # Backend-specific commands
 cd apps/backend
 bun drizzle                             # Open Drizzle Studio (database GUI)
-bun migrate:dev                         # Run migrations on development DB
-bun migrate:pre                         # Run migrations on preview DB
-bun migrate:prod                        # Run migrations on production DB
+bun migrate:dev --file=migrations/XXXX_name.sql   # Run specific migration on dev DB
+bun migrate:pre --file=migrations/XXXX_name.sql   # Run migration on preview DB
+bun migrate:prod --file=migrations/XXXX_name.sql  # Run migration on production DB
 
 # Frontend-specific commands
 cd apps/frontend
@@ -94,12 +97,12 @@ All routes are mounted under `/api/*` prefix.
 
 Tables: `users`, `task_lists`, `tasks`, `events`
 
-- **users**: id (integer), email, username, first_name, last_name, password_hash, role (user|developer)
+- **users**: id (integer), email, username, first_name, last_name, password_hash, role (user|developer), deleted_at
 - **task_lists**: id (text/UUID), user_id, name
-- **tasks**: id (text/UUID), list_id, title, completed, due_date, is_recurring, recurring_days
-- **events**: id (text/UUID), user_id, task_id (nullable), title, date, start_time, end_time
+- **tasks**: id (text/UUID), user_id, list_id (nullable), title, description, completed, due_date, duration, is_recurring, recurring_days, deleted_at
+- **events**: id (text/UUID), user_id, task_id, date, start_time, end_time
 
-All tables have `created_at` and `updated_at` timestamps. Foreign keys cascade on delete.
+All tables have `created_at` and `updated_at` timestamps. Foreign keys cascade on delete. Tasks have `user_id` directly for ownership and optionally belong to a `task_list`.
 
 ## Database Workflow
 
@@ -116,7 +119,7 @@ cd apps/backend
 bun drizzle  # Opens Drizzle Studio on localhost:4983
 ```
 
-Drizzle config is in `apps/backend/drizzle.config.ts` pointing to local D1 SQLite file.
+Drizzle config is in `apps/backend/drizzle.config.ts` pointing to local D1 SQLite file at `.wrangler/state/v3/d1/miniflare-D1DatabaseObject/*/db.sqlite`.
 
 ## Shared Types
 
@@ -139,10 +142,16 @@ Database types are exported from schema: `apps/backend/src/db/schema.ts`
 ### Environment Bindings (wrangler.toml)
 
 - `DB`: D1 database binding
-- `AI`: Workers AI binding for AI features
+- `AI`: Workers AI binding (uses `@cf/qwen/qwq-32b` for task scheduling, `@cf/meta/llama-3.1-8b-instruct` for chat)
 - `JWT_SECRET`: Secret for JWT token signing (set per environment)
 
-Three environments: `development`, `preview`, `production`
+Three environments: `development` (local D1), `preview`, `production`
+
+### Frontend Environment
+
+API base URL is configured in `apps/frontend/src/config/env.ts`:
+- Development: `http://localhost:8787`
+- Production: `https://chronos-backend.jofrescari.workers.dev`
 
 ## Project Wiki
 

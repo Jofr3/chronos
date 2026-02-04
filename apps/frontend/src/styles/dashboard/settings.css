@@ -1,0 +1,209 @@
+/* Settings Page */
+
+.settings-page {
+  min-height: 100vh;
+  background: var(--n-bg);
+  padding: 40px 20px;
+}
+
+.settings-container {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.settings-header {
+  margin-bottom: 32px;
+}
+
+.settings-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--n-text-light);
+  text-decoration: none;
+  font-size: 13px;
+  margin-bottom: 12px;
+  transition: color 0.15s;
+
+  &:hover {
+    color: var(--n-text);
+  }
+}
+
+.settings-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--n-text);
+}
+
+.settings-section {
+  background: white;
+  border: 1px solid var(--n-border);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.settings-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.settings-section-title {
+  margin: 0 0 4px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--n-text);
+}
+
+.settings-section-desc {
+  margin: 0;
+  font-size: 13px;
+  color: var(--n-text-light);
+}
+
+.settings-add-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 4px;
+  background: var(--n-select);
+  color: white;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background 0.15s;
+
+  &:hover {
+    background: #1b6ec2;
+  }
+}
+
+.settings-loading {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--n-text-light);
+  font-size: 14px;
+}
+
+.settings-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--n-text-light);
+  font-size: 14px;
+}
+
+.settings-empty-hint {
+  margin-top: 8px;
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+.settings-error {
+  margin-top: 16px;
+  padding: 10px 14px;
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+/* Constraint List */
+
+.constraint-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.constraint-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--n-sidebar);
+  border-radius: 6px;
+  border: 1px solid var(--n-border);
+}
+
+.constraint-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.constraint-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--n-text);
+  margin-bottom: 2px;
+}
+
+.constraint-details {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--n-text-light);
+}
+
+.constraint-time {
+  font-variant-numeric: tabular-nums;
+}
+
+.constraint-schedule {
+  opacity: 0.8;
+}
+
+.constraint-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.constraint-action-btn {
+  padding: 6px;
+  border: none;
+  background: transparent;
+  color: var(--n-text-light);
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+
+  &:hover {
+    background: var(--n-hover);
+    color: var(--n-text);
+  }
+
+  &.constraint-action-btn--delete:hover {
+    background: #fef2f2;
+    color: #dc2626;
+  }
+}
+
+/* Modal Time Range */
+
+.modal-time-range {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modal-time-range .modal-input {
+  flex: 1;
+}
+
+.modal-time-separator {
+  color: var(--n-text-light);
+  font-size: 13px;
+}
