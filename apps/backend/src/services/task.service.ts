@@ -69,6 +69,7 @@ export class TaskService {
       completed?: boolean;
       due_date?: string | null;
       duration?: number | null;
+      preferred_start_time?: string | null;
       is_recurring?: boolean;
       recurring_days?: DayOfWeek[] | null;
       list_id?: string | null;

@@ -113,8 +113,8 @@ export default component$(() => {
       error.value = "Start and end time are required";
       return;
     }
-    if (modal.startTime >= modal.endTime) {
-      error.value = "End time must be after start time";
+    if (modal.startTime === modal.endTime) {
+      error.value = "Start and end time cannot be the same";
       return;
     }
     if (modal.isRecurring && modal.recurringDays.length === 0) {
@@ -337,6 +337,9 @@ export default component$(() => {
                     type="time"
                     class="modal-input"
                     value={modal.startTime}
+                    min="00:00"
+                    max="23:59"
+                    step="60"
                     onInput$={(e) => {
                       modal.startTime = (e.target as HTMLInputElement).value;
                     }}
@@ -346,6 +349,9 @@ export default component$(() => {
                     type="time"
                     class="modal-input"
                     value={modal.endTime}
+                    min="00:00"
+                    max="23:59"
+                    step="60"
                     onInput$={(e) => {
                       modal.endTime = (e.target as HTMLInputElement).value;
                     }}

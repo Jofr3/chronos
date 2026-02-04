@@ -284,6 +284,7 @@ ai.post("/schedule", authMiddleware, async (c: ProtectedContext) => {
 
     // Get tasks eligible for scheduling
     const tasks = await taskService.getSchedulableTasks(userId);
+    console.log("Raw tasks from DB:", JSON.stringify(tasks, null, 2));
 
     // Generate available dates (today + 14 days)
     const allAvailableDates: string[] = [];
@@ -307,8 +308,16 @@ ai.post("/schedule", authMiddleware, async (c: ProtectedContext) => {
       return matchingDates;
     };
 
+    // Helper to determine time period from a specific time (HH:MM)
+    const getTimePeriodFromTime = (time: string): TimePeriod => {
+      const [hours] = time.split(":").map(Number);
+      if (hours >= 6 && hours < 12) return "morning";
+      if (hours >= 12 && hours < 17) return "afternoon";
+      return "evening";
+    };
+
     // Create ID mapping (fake ID -> real ID) and anonymize tasks for AI
-    const idMapping: Array<{ fake_id: string; real_id: string; is_recurring: boolean; duration: number; available_dates: string[] }> = [];
+    const idMapping: Array<{ fake_id: string; real_id: string; is_recurring: boolean; duration: number; available_dates: string[]; preferred_start_time?: string }> = [];
     const todayStr = allAvailableDates[0]; // First date is today
     const anonymizedTasks = tasks.map((task, index) => {
       const fake_id = `t${index}`;
@@ -338,7 +347,11 @@ ai.post("/schedule", authMiddleware, async (c: ProtectedContext) => {
       }
 
       const duration = task.duration || 60;
-      idMapping.push({ fake_id, real_id: task.id, is_recurring: task.is_recurring, duration, available_dates });
+      const preferred_start_time = task.preferred_start_time || undefined;
+
+      console.log(`Task ${fake_id} (${task.title}): preferred_start_time = ${preferred_start_time}`);
+
+      idMapping.push({ fake_id, real_id: task.id, is_recurring: task.is_recurring, duration, available_dates, preferred_start_time });
 
       const taskObj: {
         id: string;
@@ -346,6 +359,7 @@ ai.post("/schedule", authMiddleware, async (c: ProtectedContext) => {
         duration: number;
         available_dates: string[];
         is_recurring?: boolean;
+        preferred_time_period?: TimePeriod;
       } = {
         id: fake_id,
         title: task.title,
@@ -356,6 +370,11 @@ ai.post("/schedule", authMiddleware, async (c: ProtectedContext) => {
       // Only include is_recurring if true to avoid confusing the AI
       if (task.is_recurring) {
         taskObj.is_recurring = true;
+      }
+
+      // If task has preferred_start_time, convert it to time_period for AI
+      if (preferred_start_time) {
+        taskObj.preferred_time_period = getTimePeriodFromTime(preferred_start_time);
       }
 
       return taskObj;
@@ -385,11 +404,12 @@ ${JSON.stringify(anonymizedTasks, null, 2)}
 
 RULES:
 - Each task has an available_dates array - you MUST schedule the task on one of those dates
-- Choose time_period based on the task title:
+- If a task has preferred_time_period field, USE that time period (it represents the user's preference)
+- Otherwise, choose time_period based on the task title:
   * morning (6am-12pm): breakfast, morning routine, gym, workout, exercise, jog, run
   * afternoon (12pm-5pm): lunch, work tasks, meetings, errands, shopping, groceries
   * evening (5pm-10pm): dinner, cooking, relaxation, family time, homework, study
-- If the title doesn't suggest a specific time, use "afternoon" as default
+- If the title doesn't suggest a specific time and no preferred_time_period is set, use "afternoon" as default
 - IMPORTANT: Pack as many tasks as possible into the same day before using the next day
 - For tasks with is_recurring=true: pick the FIRST date from available_dates
 - Schedule each task only ONCE in your response`
@@ -519,9 +539,58 @@ RULES:
       return null; // No available slot in this range
     };
 
-    // Find available slot, preferring the specified time period, falling back to others
-    const findAvailableSlot = (date: string, duration: number, preferredPeriod: TimePeriod = "afternoon"): { start: number; end: number } | null => {
-      // Try preferred period first
+    // Find available slot, preferring a specific time if provided, otherwise using time period
+    const findAvailableSlot = (date: string, duration: number, preferredPeriod: TimePeriod = "afternoon", preferredStartTime?: string): { start: number; end: number } | null => {
+      // If preferred start time is specified, try to find a slot close to that time
+      if (preferredStartTime) {
+        const preferredMinutes = timeToMinutes(preferredStartTime);
+        const gap = 5;
+        const slots = getBlockedSlots(date);
+
+        // Try to schedule exactly at preferred time
+        let canScheduleAtPreferred = true;
+        for (const slot of slots) {
+          if (preferredMinutes < slot.end && preferredMinutes + duration > slot.start) {
+            canScheduleAtPreferred = false;
+            break;
+          }
+        }
+        if (canScheduleAtPreferred && preferredMinutes >= timePeriods.morning.start && preferredMinutes + duration <= timePeriods.evening.end) {
+          return { start: preferredMinutes, end: preferredMinutes + duration };
+        }
+
+        // If exact time is not available, try to find closest available slot in same period
+        const period = getTimePeriodFromTime(preferredStartTime);
+        const range = timePeriods[period];
+
+        // Search for closest slot to preferred time within the same period
+        let closestSlot: { start: number; end: number } | null = null;
+        let minDistance = Infinity;
+
+        for (let candidateStart = range.start; candidateStart + duration <= range.end; candidateStart += gap) {
+          const candidateEnd = candidateStart + duration;
+          let isAvailable = true;
+
+          for (const slot of slots) {
+            if (candidateStart < slot.end && candidateEnd > slot.start) {
+              isAvailable = false;
+              break;
+            }
+          }
+
+          if (isAvailable) {
+            const distance = Math.abs(candidateStart - preferredMinutes);
+            if (distance < minDistance) {
+              minDistance = distance;
+              closestSlot = { start: candidateStart, end: candidateEnd };
+            }
+          }
+        }
+
+        if (closestSlot) return closestSlot;
+      }
+
+      // Fall back to standard time period-based scheduling
       const preferred = timePeriods[preferredPeriod];
       let slot = findSlotInRange(date, duration, preferred.start, preferred.end);
       if (slot) return slot;
@@ -561,9 +630,65 @@ RULES:
     const result: Array<{ task_id: string; date: string; start_time: string; end_time: string }> = [];
 
     // Helper to find a slot that works on ALL dates for a recurring task
-    const findRecurringSlot = (availableDates: string[], duration: number, preferredPeriod: TimePeriod): { start: number; end: number } | null => {
+    const findRecurringSlot = (availableDates: string[], duration: number, preferredPeriod: TimePeriod, preferredStartTime?: string): { start: number; end: number } | null => {
       const gap = 5;
-      // Try periods in order: preferred first, then fallbacks
+
+      // If preferred start time is specified, try that exact time first
+      if (preferredStartTime) {
+        const preferredMinutes = timeToMinutes(preferredStartTime);
+        const candidateEnd = preferredMinutes + duration;
+        let fitsAllDates = true;
+
+        // Check if this exact time works on all dates
+        for (const date of availableDates) {
+          const slots = getBlockedSlots(date);
+          for (const slot of slots) {
+            if (preferredMinutes < slot.end && candidateEnd > slot.start) {
+              fitsAllDates = false;
+              break;
+            }
+          }
+          if (!fitsAllDates) break;
+        }
+
+        if (fitsAllDates && preferredMinutes >= timePeriods.morning.start && candidateEnd <= timePeriods.evening.end) {
+          return { start: preferredMinutes, end: candidateEnd };
+        }
+
+        // If exact time doesn't work, try to find closest slot in same period
+        const period = getTimePeriodFromTime(preferredStartTime);
+        const range = timePeriods[period];
+        let closestSlot: { start: number; end: number } | null = null;
+        let minDistance = Infinity;
+
+        for (let candidateStart = range.start; candidateStart + duration <= range.end; candidateStart += gap) {
+          const candidateEnd = candidateStart + duration;
+          let fitsAllDates = true;
+
+          for (const date of availableDates) {
+            const slots = getBlockedSlots(date);
+            for (const slot of slots) {
+              if (candidateStart < slot.end && candidateEnd > slot.start) {
+                fitsAllDates = false;
+                break;
+              }
+            }
+            if (!fitsAllDates) break;
+          }
+
+          if (fitsAllDates) {
+            const distance = Math.abs(candidateStart - preferredMinutes);
+            if (distance < minDistance) {
+              minDistance = distance;
+              closestSlot = { start: candidateStart, end: candidateEnd };
+            }
+          }
+        }
+
+        if (closestSlot) return closestSlot;
+      }
+
+      // Fall back to period-based search
       const periodOrder: TimePeriod[] = [preferredPeriod, ...["afternoon", "morning", "evening"].filter(p => p !== preferredPeriod) as TimePeriod[]];
 
       for (const period of periodOrder) {
@@ -598,10 +723,10 @@ RULES:
       const availableDates = mapping.available_dates;
       const duration = mapping.duration;
 
-      const foundSlot = findRecurringSlot(availableDates, duration, time_period);
+      const foundSlot = findRecurringSlot(availableDates, duration, time_period, mapping.preferred_start_time);
 
       if (foundSlot) {
-        console.log(`Recurring task ${mapping.fake_id}: assigned ${minutesToTime(foundSlot.start)}-${minutesToTime(foundSlot.end)} (preferred: ${time_period}) on dates:`, availableDates);
+        console.log(`Recurring task ${mapping.fake_id}: assigned ${minutesToTime(foundSlot.start)}-${minutesToTime(foundSlot.end)} (preferred: ${time_period}${mapping.preferred_start_time ? `, exact time: ${mapping.preferred_start_time}` : ''}) on dates:`, availableDates);
         // Block this slot on ALL available dates and create events
         for (const date of availableDates) {
           addBlockedSlot(date, foundSlot.start, foundSlot.end);
@@ -621,9 +746,9 @@ RULES:
     console.log("Blocked slots before non-recurring:", Object.fromEntries([...blockedSlots.entries()].map(([d, slots]) => [d, slots.map(s => `${minutesToTime(s.start)}-${minutesToTime(s.end)}`)])));
 
     for (const { date, time_period, mapping } of nonRecurringScheduled) {
-      const slot = findAvailableSlot(date, mapping.duration, time_period);
+      const slot = findAvailableSlot(date, mapping.duration, time_period, mapping.preferred_start_time);
       if (slot) {
-        console.log(`Non-recurring task ${mapping.fake_id}: assigned ${minutesToTime(slot.start)}-${minutesToTime(slot.end)} (preferred: ${time_period}) on ${date}`);
+        console.log(`Non-recurring task ${mapping.fake_id}: assigned ${minutesToTime(slot.start)}-${minutesToTime(slot.end)} (preferred: ${time_period}${mapping.preferred_start_time ? `, exact time: ${mapping.preferred_start_time}` : ''}) on ${date}`);
         addBlockedSlot(date, slot.start, slot.end);
         result.push({
           task_id: mapping.real_id,
@@ -636,7 +761,7 @@ RULES:
         // Try to find a slot on other available dates
         for (const altDate of mapping.available_dates) {
           if (altDate === date) continue;
-          const altSlot = findAvailableSlot(altDate, mapping.duration, time_period);
+          const altSlot = findAvailableSlot(altDate, mapping.duration, time_period, mapping.preferred_start_time);
           if (altSlot) {
             addBlockedSlot(altDate, altSlot.start, altSlot.end);
             result.push({

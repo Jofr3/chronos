@@ -8,12 +8,14 @@ interface EditTaskModalProps {
   description: string;
   dueDate: string;
   duration: string;
+  preferredStartTime: string;
   isRecurring: boolean;
   recurringDays: boolean[];
   onTitleChange$: PropFunction<(value: string) => void>;
   onDescriptionChange$: PropFunction<(value: string) => void>;
   onDueDateChange$: PropFunction<(value: string) => void>;
   onDurationChange$: PropFunction<(value: string) => void>;
+  onPreferredStartTimeChange$: PropFunction<(value: string) => void>;
   onIsRecurringChange$: PropFunction<(value: boolean) => void>;
   onToggleRecurringDay$: PropFunction<(dayIndex: number) => void>;
   onSave$: PropFunction<() => void>;
@@ -27,12 +29,14 @@ export const EditTaskModal = component$<EditTaskModalProps>(
     description,
     dueDate,
     duration,
+    preferredStartTime,
     isRecurring,
     recurringDays,
     onTitleChange$,
     onDescriptionChange$,
     onDueDateChange$,
     onDurationChange$,
+    onPreferredStartTimeChange$,
     onIsRecurringChange$,
     onToggleRecurringDay$,
     onSave$,
@@ -114,6 +118,24 @@ export const EditTaskModal = component$<EditTaskModalProps>(
                   {formatDuration(parseInt(duration))}
                 </div>
               )}
+            </div>
+
+            {/* Preferred Start Time */}
+            <div class="modal-field">
+              <label class="modal-label">Preferred Start Time</label>
+              <input
+                type="time"
+                value={preferredStartTime}
+                onInput$={(e) =>
+                  onPreferredStartTimeChange$((e.target as HTMLInputElement).value)
+                }
+                class="modal-input"
+              />
+              <div
+                style="font-size: 12px; color: var(--text-tertiary); margin-top: 6px;"
+              >
+                AI will try to schedule this task around this time
+              </div>
             </div>
 
             {/* Task Type: One-shot vs Recurring */}

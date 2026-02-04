@@ -289,6 +289,7 @@ export default component$(() => {
         description: editModal.description || null,
         due_date: editModal.dueDate || null,
         duration: duration,
+        preferred_start_time: editModal.preferredStartTime || null,
         is_recurring: editModal.isRecurring,
         recurring_days: recurringDays,
       });
@@ -977,6 +978,18 @@ export default component$(() => {
                   placeholder="e.g., 30"
                   min="0"
                 />
+              </div>
+              <div class="modal-field">
+                <label class="modal-label">Preferred Start Time</label>
+                <input
+                  type="time"
+                  value={editModal.preferredStartTime}
+                  onInput$={(e) => editModal.preferredStartTime = (e.target as HTMLInputElement).value}
+                  class="modal-input"
+                />
+                <div style="font-size: 12px; color: var(--text-tertiary); margin-top: 6px;">
+                  AI will try to schedule this task around this time
+                </div>
               </div>
               <div class="modal-field">
                 <label class="modal-label">Type</label>

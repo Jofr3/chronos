@@ -12,6 +12,7 @@ export interface Task {
   completed: boolean;
   due_date: string | null;
   duration: number | null; // Duration in minutes
+  preferred_start_time: string | null; // Preferred time in HH:MM format (e.g., "20:00" for 8 PM)
   is_recurring: boolean;
   recurring_days: DayOfWeek[] | null;
   created_at: string;
@@ -59,6 +60,7 @@ export interface UpdateTaskRequest {
   completed?: boolean;
   due_date?: string | null;
   duration?: number | null;
+  preferred_start_time?: string | null;
   is_recurring?: boolean;
   recurring_days?: DayOfWeek[] | null;
   list_id?: string | null;

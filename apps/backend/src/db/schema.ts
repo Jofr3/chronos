@@ -70,6 +70,7 @@ export const tasks = sqliteTable(
     completed: integer("completed", { mode: "boolean" }).notNull().default(false),
     due_date: text("due_date"),
     duration: integer("duration"), // Duration in minutes
+    preferred_start_time: text("preferred_start_time"), // Preferred time in HH:MM format (e.g., "20:00" for 8 PM)
     is_recurring: integer("is_recurring", { mode: "boolean" }).notNull().default(false),
     recurring_days: text("recurring_days"), // JSON string: "[0,1,2,3,4,5,6]"
     created_at: text("created_at")

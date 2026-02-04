@@ -8,6 +8,7 @@ export interface EditModalState {
   description: string;
   dueDate: string;
   duration: string;
+  preferredStartTime: string;
   isRecurring: boolean;
   recurringDays: boolean[];
 }
@@ -50,6 +51,7 @@ export function getInitialEditModalState(): EditModalState {
     description: "",
     dueDate: "",
     duration: "",
+    preferredStartTime: "",
     isRecurring: false,
     recurringDays: [false, false, false, false, false, false, false],
   };
@@ -74,6 +76,7 @@ export function taskToEditModalState(task: Task, listId: string | null): Partial
     description: task.description || "",
     dueDate: task.due_date || "",
     duration: task.duration !== null ? task.duration.toString() : "",
+    preferredStartTime: task.preferred_start_time || "",
     isRecurring: task.is_recurring,
     recurringDays: days,
   };

@@ -24,10 +24,12 @@ function rowToTask(row: typeof tasks.$inferSelect): Task {
     completed: row.completed,
     due_date: row.due_date,
     duration: row.duration,
+    preferred_start_time: row.preferred_start_time,
     is_recurring: row.is_recurring,
     recurring_days: parseRecurringDays(row.recurring_days),
     created_at: row.created_at,
     updated_at: row.updated_at,
+    deleted_at: row.deleted_at,
   };
 }
 
@@ -191,6 +193,7 @@ export interface SchedulableTask {
   title: string;
   due_date: string | null;
   duration: number | null;
+  preferred_start_time: string | null;
   is_recurring: boolean;
   recurring_days: DayOfWeek[] | null;
 }
@@ -216,6 +219,7 @@ export async function getSchedulableTasks(
       title: tasks.title,
       due_date: tasks.due_date,
       duration: tasks.duration,
+      preferred_start_time: tasks.preferred_start_time,
       is_recurring: tasks.is_recurring,
       recurring_days: tasks.recurring_days,
     })
@@ -236,6 +240,7 @@ export async function getSchedulableTasks(
     title: row.title,
     due_date: row.due_date,
     duration: row.duration,
+    preferred_start_time: row.preferred_start_time,
     is_recurring: row.is_recurring,
     recurring_days: parseRecurringDays(row.recurring_days),
   }));
@@ -331,6 +336,7 @@ export async function updateTask(
     completed?: boolean;
     due_date?: string | null;
     duration?: number | null;
+    preferred_start_time?: string | null;
     is_recurring?: boolean;
     recurring_days?: DayOfWeek[] | null;
     list_id?: string | null;
@@ -346,6 +352,7 @@ export async function updateTask(
   if (updates.completed !== undefined) updateData.completed = updates.completed;
   if (updates.due_date !== undefined) updateData.due_date = updates.due_date;
   if (updates.duration !== undefined) updateData.duration = updates.duration;
+  if (updates.preferred_start_time !== undefined) updateData.preferred_start_time = updates.preferred_start_time;
   if (updates.is_recurring !== undefined) updateData.is_recurring = updates.is_recurring;
   if (updates.recurring_days !== undefined) {
     updateData.recurring_days = updates.recurring_days ? JSON.stringify(updates.recurring_days) : null;
