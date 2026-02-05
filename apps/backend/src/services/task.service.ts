@@ -1,6 +1,7 @@
 import type { DrizzleClient } from "../db/client";
 import type { Task, TaskList, TaskListWithTasks, DayOfWeek } from "@chronos/types";
 import * as taskQueries from "../db/queries/tasks";
+import * as eventQueries from "../db/queries/events";
 import type { SchedulableTask } from "../db/queries/tasks";
 
 export type { SchedulableTask };
@@ -105,6 +106,11 @@ export class TaskService {
       throw new Error("Access denied");
     }
 
+    // Delete only future events (today and onwards), preserving old events
+    const today = new Date().toISOString().split("T")[0];
+    await eventQueries.deleteEventsByTaskIds(this.db, [taskId], userId, today);
+
+    // Soft delete the task (sets deleted_at)
     return taskQueries.deleteTask(this.db, taskId);
   }
 

@@ -742,12 +742,28 @@ RULES:
       }
     }
 
+    // Helper to verify a slot doesn't overlap with existing blocked slots
+    const isSlotValid = (date: string, slotStart: number, slotEnd: number): boolean => {
+      const slots = getBlockedSlots(date);
+      for (const blocked of slots) {
+        // Check for any overlap
+        if (slotStart < blocked.end && slotEnd > blocked.start) {
+          console.log(`Slot ${minutesToTime(slotStart)}-${minutesToTime(slotEnd)} overlaps with blocked ${minutesToTime(blocked.start)}-${minutesToTime(blocked.end)}`);
+          return false;
+        }
+      }
+      return true;
+    };
+
     // Then, assign times to non-recurring tasks
     console.log("Blocked slots before non-recurring:", Object.fromEntries([...blockedSlots.entries()].map(([d, slots]) => [d, slots.map(s => `${minutesToTime(s.start)}-${minutesToTime(s.end)}`)])));
 
     for (const { date, time_period, mapping } of nonRecurringScheduled) {
+      let scheduled = false;
       const slot = findAvailableSlot(date, mapping.duration, time_period, mapping.preferred_start_time);
-      if (slot) {
+
+      // Validate the slot before using it
+      if (slot && isSlotValid(date, slot.start, slot.end)) {
         console.log(`Non-recurring task ${mapping.fake_id}: assigned ${minutesToTime(slot.start)}-${minutesToTime(slot.end)} (preferred: ${time_period}${mapping.preferred_start_time ? `, exact time: ${mapping.preferred_start_time}` : ''}) on ${date}`);
         addBlockedSlot(date, slot.start, slot.end);
         result.push({
@@ -756,13 +772,16 @@ RULES:
           start_time: minutesToTime(slot.start),
           end_time: minutesToTime(slot.end),
         });
+        scheduled = true;
       } else {
-        console.log(`Non-recurring task ${mapping.fake_id}: no slot on ${date}, trying alternatives...`);
-        // Try to find a slot on other available dates
+        console.log(`Non-recurring task ${mapping.fake_id}: no valid slot on ${date}, trying alternatives...`);
+
+        // First try the task's available dates
         for (const altDate of mapping.available_dates) {
           if (altDate === date) continue;
           const altSlot = findAvailableSlot(altDate, mapping.duration, time_period, mapping.preferred_start_time);
-          if (altSlot) {
+          if (altSlot && isSlotValid(altDate, altSlot.start, altSlot.end)) {
+            console.log(`Non-recurring task ${mapping.fake_id}: scheduled on alternative date ${altDate}`);
             addBlockedSlot(altDate, altSlot.start, altSlot.end);
             result.push({
               task_id: mapping.real_id,
@@ -770,8 +789,35 @@ RULES:
               start_time: minutesToTime(altSlot.start),
               end_time: minutesToTime(altSlot.end),
             });
+            scheduled = true;
             break;
           }
+        }
+
+        // If still not scheduled, try ALL available dates as overflow
+        // This handles the case where a task's due_date day is full
+        if (!scheduled) {
+          console.log(`Non-recurring task ${mapping.fake_id}: trying overflow to any available date...`);
+          for (const overflowDate of allAvailableDates) {
+            if (overflowDate === date || mapping.available_dates.includes(overflowDate)) continue;
+            const overflowSlot = findAvailableSlot(overflowDate, mapping.duration, time_period, mapping.preferred_start_time);
+            if (overflowSlot && isSlotValid(overflowDate, overflowSlot.start, overflowSlot.end)) {
+              console.log(`Non-recurring task ${mapping.fake_id}: overflow to ${overflowDate} at ${minutesToTime(overflowSlot.start)}-${minutesToTime(overflowSlot.end)}`);
+              addBlockedSlot(overflowDate, overflowSlot.start, overflowSlot.end);
+              result.push({
+                task_id: mapping.real_id,
+                date: overflowDate,
+                start_time: minutesToTime(overflowSlot.start),
+                end_time: minutesToTime(overflowSlot.end),
+              });
+              scheduled = true;
+              break;
+            }
+          }
+        }
+
+        if (!scheduled) {
+          console.log(`Non-recurring task ${mapping.fake_id}: FAILED to schedule on any date!`);
         }
       }
     }

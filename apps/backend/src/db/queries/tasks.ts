@@ -73,7 +73,7 @@ export async function getAllTaskListsWithTasks(
     db
       .select()
       .from(tasks)
-      .where(eq(tasks.user_id, userId))
+      .where(and(eq(tasks.user_id, userId), isNull(tasks.deleted_at)))
       .orderBy(asc(tasks.created_at)),
   ]);
 
@@ -172,7 +172,7 @@ export async function getTasksByListId(db: DrizzleClient, listId: string): Promi
   const result = await db
     .select()
     .from(tasks)
-    .where(eq(tasks.list_id, listId))
+    .where(and(eq(tasks.list_id, listId), isNull(tasks.deleted_at)))
     .orderBy(asc(tasks.created_at));
 
   return result.map(rowToTask);
@@ -182,7 +182,7 @@ export async function getAllTasksByUserId(db: DrizzleClient, userId: string): Pr
   const result = await db
     .select()
     .from(tasks)
-    .where(eq(tasks.user_id, userId))
+    .where(and(eq(tasks.user_id, userId), isNull(tasks.deleted_at)))
     .orderBy(asc(tasks.created_at));
 
   return result.map(rowToTask);
@@ -250,7 +250,7 @@ export async function getTasksWithoutList(db: DrizzleClient, userId: string): Pr
   const result = await db
     .select()
     .from(tasks)
-    .where(and(eq(tasks.user_id, userId), isNull(tasks.list_id)))
+    .where(and(eq(tasks.user_id, userId), isNull(tasks.list_id), isNull(tasks.deleted_at)))
     .orderBy(asc(tasks.created_at));
 
   return result.map(rowToTask);
@@ -260,7 +260,7 @@ export async function getTaskById(db: DrizzleClient, taskId: string): Promise<Ta
   const result = await db
     .select()
     .from(tasks)
-    .where(eq(tasks.id, taskId))
+    .where(and(eq(tasks.id, taskId), isNull(tasks.deleted_at)))
     .limit(1);
 
   if (result.length === 0) return null;
@@ -371,8 +371,12 @@ export async function updateTask(
 }
 
 export async function deleteTask(db: DrizzleClient, taskId: string): Promise<boolean> {
+  const now = new Date().toISOString();
+
+  // Soft delete the task by setting deleted_at
   const result = await db
-    .delete(tasks)
+    .update(tasks)
+    .set({ deleted_at: now, updated_at: now })
     .where(eq(tasks.id, taskId))
     .returning();
 

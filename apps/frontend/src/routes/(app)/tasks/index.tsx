@@ -62,6 +62,30 @@ export default component$(() => {
   // Task menu state
   const openMenuTaskId = useSignal<string | null>(null);
 
+  // List menu state
+  const openMenuListId = useSignal<string | null>(null);
+  const listMenuPosition = useSignal<{ top: number; left: number } | null>(null);
+
+  // List tabs scroll state
+  const listTabsRef = useSignal<HTMLDivElement>();
+  const canScrollLeft = useSignal(false);
+  const canScrollRight = useSignal(false);
+
+  const updateScrollButtons = $(() => {
+    const el = listTabsRef.value;
+    if (!el) return;
+    canScrollLeft.value = el.scrollLeft > 0;
+    canScrollRight.value = el.scrollLeft < el.scrollWidth - el.clientWidth - 1;
+  });
+
+  const scrollListTabs = $((direction: "left" | "right") => {
+    const el = listTabsRef.value;
+    if (!el) return;
+    const scrollAmount = 120;
+    el.scrollBy({ left: direction === "left" ? -scrollAmount : scrollAmount, behavior: "smooth" });
+    setTimeout(() => updateScrollButtons(), 150);
+  });
+
   // ===== TASKS LOGIC =====
   const addTask = $(async () => {
     if (!newTaskTitle.value.trim()) return;
@@ -93,11 +117,40 @@ export default component$(() => {
       const newList = await taskService.createTaskList(newListName.value.trim());
       lists.value = [...lists.value, { ...newList, tasks: [] }];
       activeListId.value = newList.id;
+      // Scroll to show the new list after DOM updates (scroll twice to ensure it catches the DOM update)
+      const scrollToEnd = () => {
+        const el = listTabsRef.value;
+        if (el) {
+          el.scrollLeft = el.scrollWidth;
+          updateScrollButtons();
+        }
+      };
+      setTimeout(scrollToEnd, 0);
+      setTimeout(scrollToEnd, 100);
+      setTimeout(scrollToEnd, 200);
     } catch (err) {
       error.value = err instanceof Error ? err.message : "Failed to create list";
     }
     isCreatingList.value = false;
     newListName.value = "";
+  });
+
+  const deleteList = $(async (listId: string) => {
+    try {
+      await taskService.deleteTaskList(listId);
+      lists.value = lists.value.filter((l) => l.id !== listId);
+      // If the deleted list was active, switch to "All"
+      if (activeListId.value === listId) {
+        activeListId.value = null;
+      }
+      // Refresh calendar to remove events from deleted tasks
+      await loadEvents();
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : "Failed to delete list";
+    } finally {
+      openMenuListId.value = null;
+      listMenuPosition.value = null;
+    }
   });
 
   const toggleTask = $(async (listId: string | null, taskId: string) => {
@@ -587,6 +640,29 @@ export default component$(() => {
     });
   });
 
+  // Monitor list tabs scroll state
+  // eslint-disable-next-line qwik/no-use-visible-task
+  useVisibleTask$(({ track, cleanup }) => {
+    track(() => lists.value);
+    const el = listTabsRef.value;
+    if (!el) return;
+
+    const handleScroll = () => updateScrollButtons();
+    el.addEventListener("scroll", handleScroll);
+
+    // Use ResizeObserver to detect when container or content size changes
+    const resizeObserver = new ResizeObserver(() => updateScrollButtons());
+    resizeObserver.observe(el);
+
+    // Initial check after a small delay to let DOM settle
+    setTimeout(() => updateScrollButtons(), 50);
+
+    cleanup(() => {
+      el.removeEventListener("scroll", handleScroll);
+      resizeObserver.disconnect();
+    });
+  });
+
   // Helper: compute visible tasks
   const visibleTasks = (() => {
     if (activeListId.value === null) {
@@ -631,55 +707,148 @@ export default component$(() => {
           if (!target.closest(".task-menu-wrapper")) {
             openMenuTaskId.value = null;
           }
+          if (!target.closest(".list-tab-menu-wrapper") && !target.closest(".list-tab-menu-dropdown")) {
+            openMenuListId.value = null;
+            listMenuPosition.value = null;
+          }
         }}
       >
         <div class="tasks-header">
           {/* List Tabs */}
           <div class="list-tabs">
-            <div class="list-tabs-inner">
+            <div class="list-tabs-scroll-wrapper">
               <button
-                class={`list-tab ${activeListId.value === null ? 'active' : ''}`}
-                onClick$={() => { activeListId.value = null; }}
+                class={`list-tabs-scroll-btn left ${!canScrollLeft.value ? 'hidden' : ''}`}
+                onClick$={() => scrollListTabs("left")}
+                aria-label="Scroll left"
               >
-                <span class="list-tab-dot" style={{ background: "#6b7280" }}></span>
-                All
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path d="M15 18l-6-6 6-6" />
+                </svg>
               </button>
-              {lists.value.map((list, i) => (
+              <div class={`list-tabs-inner ${canScrollLeft.value ? 'has-scroll-left' : ''}`} ref={listTabsRef}>
                 <button
-                  key={list.id}
-                  class={`list-tab ${activeListId.value === list.id ? 'active' : ''}`}
-                  onClick$={() => { activeListId.value = list.id; }}
+                  class={`list-tab ${activeListId.value === null ? 'active' : ''}`}
+                  onClick$={() => { activeListId.value = null; }}
                 >
-                  <span class="list-tab-dot" style={{ background: LIST_COLORS[i % LIST_COLORS.length] }}></span>
-                  {list.name}
+                  <span class="list-tab-dot" style={{ background: "#6b7280" }}></span>
+                  All
                 </button>
-              ))}
-              {isCreatingList.value ? (
-                <input
-                  class="list-tab-input"
-                  type="text"
-                  placeholder="List name..."
-                  value={newListName.value}
-                  onInput$={(e) => { newListName.value = (e.target as HTMLInputElement).value; }}
-                  onKeyDown$={(e) => {
-                    if (e.key === "Enter") createList();
-                    else if (e.key === "Escape") { isCreatingList.value = false; newListName.value = ""; }
-                  }}
-                  onBlur$={() => createList()}
-                  autoFocus
-                />
-              ) : (
-                <button
-                  class="list-tab-add"
-                  title="Add list"
-                  onClick$={() => { isCreatingList.value = true; }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 5v14M5 12h14" />
-                  </svg>
-                </button>
+                {lists.value.map((list, i) => (
+                  <div key={list.id} class="list-tab-wrapper">
+                    <button
+                      class={`list-tab ${activeListId.value === list.id ? 'active' : ''}`}
+                      onClick$={() => { activeListId.value = list.id; }}
+                    >
+                      <span class="list-tab-dot" style={{ background: LIST_COLORS[i % LIST_COLORS.length] }}></span>
+                      {list.name}
+                    </button>
+                    <div class={`list-tab-menu-wrapper ${openMenuListId.value === list.id ? 'open' : ''}`}>
+                      <button
+                        class="list-tab-menu-btn"
+                        onClick$={(e) => {
+                          e.stopPropagation();
+                          if (openMenuListId.value === list.id) {
+                            openMenuListId.value = null;
+                            listMenuPosition.value = null;
+                          } else {
+                            const btn = e.target as HTMLElement;
+                            const rect = btn.closest('.list-tab-menu-btn')?.getBoundingClientRect() || btn.getBoundingClientRect();
+                            const listTabs = btn.closest('.list-tabs');
+                            const parentRect = listTabs?.getBoundingClientRect();
+                            if (parentRect) {
+                              listMenuPosition.value = {
+                                top: rect.bottom - parentRect.top + 4,
+                                left: rect.right - parentRect.left - 120,
+                              };
+                            }
+                            openMenuListId.value = list.id;
+                          }
+                        }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                          <circle cx="8" cy="2.5" r="1.5" />
+                          <circle cx="8" cy="8" r="1.5" />
+                          <circle cx="8" cy="13.5" r="1.5" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button
+                class={`list-tabs-scroll-btn right ${!canScrollRight.value ? 'hidden' : ''}`}
+                onClick$={() => scrollListTabs("right")}
+                aria-label="Scroll right"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
+              </button>
+            </div>
+            <div class="list-tab-add-wrapper">
+              <button
+                class="list-tab-add"
+                title="Add list"
+                onClick$={() => { isCreatingList.value = !isCreatingList.value; }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+              </button>
+              {isCreatingList.value && (
+                <div class="list-add-popup">
+                  <input
+                    class="list-add-popup-input"
+                    type="text"
+                    placeholder="List name..."
+                    value={newListName.value}
+                    onInput$={(e) => { newListName.value = (e.target as HTMLInputElement).value; }}
+                    onKeyDown$={(e) => {
+                      if (e.key === "Enter") createList();
+                      else if (e.key === "Escape") { isCreatingList.value = false; newListName.value = ""; }
+                    }}
+                    onBlur$={() => {
+                      setTimeout(() => {
+                        if (!newListName.value.trim()) {
+                          isCreatingList.value = false;
+                        } else {
+                          createList();
+                        }
+                      }, 150);
+                    }}
+                    autoFocus
+                  />
+                </div>
               )}
             </div>
+
+            {/* List Menu Dropdown - rendered outside scroll container */}
+            {openMenuListId.value && listMenuPosition.value && (
+              <div
+                class="list-tab-menu-dropdown"
+                style={{
+                  position: 'absolute',
+                  top: `${listMenuPosition.value.top}px`,
+                  left: `${Math.max(0, listMenuPosition.value.left)}px`,
+                }}
+              >
+                <button
+                  class="list-tab-menu-item danger"
+                  onClick$={(e) => {
+                    e.stopPropagation();
+                    if (openMenuListId.value) {
+                      deleteList(openMenuListId.value);
+                    }
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                  </svg>
+                  Delete
+                </button>
+              </div>
+            )}
           </div>
 
           {/* New Task Input */}
