@@ -9,9 +9,9 @@ export function getApiBaseUrl(): string {
     return "http://localhost:8787";
   }
 
-  // Production
+  // Production - use same-origin proxy (configured in _redirects)
   if (import.meta.env.PROD) {
-    return "https://chronos-backend.jofrescari.workers.dev";
+    return "";
   }
 
   // Default fallback for SSR in dev

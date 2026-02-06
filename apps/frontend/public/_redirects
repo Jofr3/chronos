@@ -1,1 +1,2 @@
 # https://developers.cloudflare.com/pages/platform/redirects/
+/api/* https://chronos-backend.jofrescari.workers.dev/api/:splat 200
