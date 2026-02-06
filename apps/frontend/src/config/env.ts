@@ -9,8 +9,12 @@ export function getApiBaseUrl(): string {
     return "http://localhost:8787";
   }
 
-  // Production - use same-origin proxy (configured in _redirects)
+  // Production
   if (import.meta.env.PROD) {
+    // SSR (Cloudflare Workers) needs absolute URL; browser uses same-origin proxy
+    if (typeof window === "undefined") {
+      return "https://chronos-backend.jofrescari.workers.dev";
+    }
     return "";
   }
 
