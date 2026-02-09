@@ -578,11 +578,22 @@ RULES:
       return findClosestSlot(date, duration, anchor);
     };
 
+    // Deduplicate AI response - keep only the first entry per task_id
+    const seenTaskIds = new Set<string>();
+    const deduplicatedTasks = scheduledTasks.filter((task) => {
+      if (seenTaskIds.has(task.task_id)) {
+        console.log(`Duplicate task_id ${task.task_id} in AI response, skipping`);
+        return false;
+      }
+      seenTaskIds.add(task.task_id);
+      return true;
+    });
+
     // Separate recurring and non-recurring tasks
     const recurringScheduled: Array<{ task_id: string; date: string; time_period: TimePeriod; mapping: typeof idMapping[0] }> = [];
     const nonRecurringScheduled: Array<{ task_id: string; date: string; time_period: TimePeriod; mapping: typeof idMapping[0] }> = [];
 
-    for (const scheduled of scheduledTasks) {
+    for (const scheduled of deduplicatedTasks) {
       const mapping = idMapping.find((m) => m.fake_id === scheduled.task_id);
       if (!mapping) continue;
 
