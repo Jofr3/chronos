@@ -8,8 +8,8 @@
     "drizzle": "bunx drizzle-kit studio",
     "build": "bun build src/index.ts --outfile=dist/index.js --target=bun",
     "migrate:dev": "bunx wrangler d1 execute DB --env development",
-    "migrate:pre": "bunx wrangler d1 execute DB --env preview",
-    "migrate:prod": "bunx wrangler d1 execute DB"
+    "migrate:pre": "bunx wrangler d1 execute DB --env preview --remote",
+    "migrate:prod": "bunx wrangler d1 execute DB --remote"
   },
   "dependencies": {
     "@chronos/types": "workspace:*",

@@ -34,7 +34,7 @@ export class AuthService {
     }
 
     return {
-      id: user.id,
+      id: String(user.id),
       email: user.email,
       username: user.username,
       firstName: user.first_name,
@@ -80,7 +80,7 @@ export class AuthService {
     });
 
     const authUser: AuthUser = {
-      id: user.id,
+      id: String(user.id),
       email: user.email,
       username: user.username,
       firstName: user.first_name,
@@ -90,7 +90,7 @@ export class AuthService {
 
     const token = await generateToken(
       {
-        sub: authUser.id,
+        sub: String(user.id),
         email: authUser.email,
         username: authUser.username,
       },
@@ -131,7 +131,7 @@ export class AuthService {
     }
 
     const authUser: AuthUser = {
-      id: user.id,
+      id: String(user.id),
       email: user.email,
       username: user.username,
       firstName: user.first_name,

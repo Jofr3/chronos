@@ -513,7 +513,7 @@ RULES:
 
     // Find next available time slot on a date within a specific time range
     const findSlotInRange = (date: string, duration: number, rangeStart: number, rangeEnd: number): { start: number; end: number } | null => {
-      const gap = 5; // 5 minute gap between tasks
+      const gap = 0; // 5 minute gap between tasks
       const slots = getBlockedSlots(date);
       let candidateStart = rangeStart;
 
@@ -544,7 +544,7 @@ RULES:
       // If preferred start time is specified, try to find a slot close to that time
       if (preferredStartTime) {
         const preferredMinutes = timeToMinutes(preferredStartTime);
-        const gap = 5;
+        const gap = 0;
         const slots = getBlockedSlots(date);
 
         // Try to schedule exactly at preferred time
@@ -631,7 +631,7 @@ RULES:
 
     // Helper to find a slot that works on ALL dates for a recurring task
     const findRecurringSlot = (availableDates: string[], duration: number, preferredPeriod: TimePeriod, preferredStartTime?: string): { start: number; end: number } | null => {
-      const gap = 5;
+      const gap = 0;
 
       // If preferred start time is specified, try that exact time first
       if (preferredStartTime) {

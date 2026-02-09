@@ -118,7 +118,7 @@ export async function getUserIdFromToken(
 
   const token = authHeader.slice(7);
   const payload = await verifyToken(token, jwtSecret);
-  return payload?.sub ?? null;
+  return payload?.sub != null ? String(payload.sub) : null;
 }
 
 /**
