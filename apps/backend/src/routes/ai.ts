@@ -673,6 +673,18 @@ RULES:
       return closestSlot;
     };
 
+    // Helper to verify a slot doesn't overlap with existing blocked slots
+    const isSlotValid = (date: string, slotStart: number, slotEnd: number): boolean => {
+      const slots = getBlockedSlots(date);
+      for (const blocked of slots) {
+        if (slotStart < blocked.end && slotEnd > blocked.start) {
+          console.log(`Slot ${minutesToTime(slotStart)}-${minutesToTime(slotEnd)} overlaps with blocked ${minutesToTime(blocked.start)}-${minutesToTime(blocked.end)}`);
+          return false;
+        }
+      }
+      return true;
+    };
+
     for (const { time_period, mapping } of recurringScheduled) {
       const availableDates = mapping.available_dates;
       const duration = mapping.duration;
@@ -692,22 +704,25 @@ RULES:
           });
         }
       } else {
-        console.log(`Recurring task ${mapping.fake_id}: NO SLOT FOUND that works on all dates`);
-      }
-    }
-
-    // Helper to verify a slot doesn't overlap with existing blocked slots
-    const isSlotValid = (date: string, slotStart: number, slotEnd: number): boolean => {
-      const slots = getBlockedSlots(date);
-      for (const blocked of slots) {
-        // Check for any overlap
-        if (slotStart < blocked.end && slotEnd > blocked.start) {
-          console.log(`Slot ${minutesToTime(slotStart)}-${minutesToTime(slotEnd)} overlaps with blocked ${minutesToTime(blocked.start)}-${minutesToTime(blocked.end)}`);
-          return false;
+        // Fallback: schedule each date individually when no common slot works
+        console.log(`Recurring task ${mapping.fake_id}: no common slot, falling back to per-date scheduling`);
+        for (const date of availableDates) {
+          const individualSlot = findAvailableSlot(date, duration, time_period, mapping.preferred_start_time);
+          if (individualSlot && isSlotValid(date, individualSlot.start, individualSlot.end)) {
+            addBlockedSlot(date, individualSlot.start, individualSlot.end);
+            result.push({
+              task_id: mapping.real_id,
+              date,
+              start_time: minutesToTime(individualSlot.start),
+              end_time: minutesToTime(individualSlot.end),
+            });
+            console.log(`Recurring task ${mapping.fake_id}: individually scheduled on ${date} at ${minutesToTime(individualSlot.start)}-${minutesToTime(individualSlot.end)}`);
+          } else {
+            console.log(`Recurring task ${mapping.fake_id}: could not schedule on ${date}`);
+          }
         }
       }
-      return true;
-    };
+    }
 
     // Then, assign times to non-recurring tasks
     console.log("Blocked slots before non-recurring:", Object.fromEntries([...blockedSlots.entries()].map(([d, slots]) => [d, slots.map(s => `${minutesToTime(s.start)}-${minutesToTime(s.end)}`)])));

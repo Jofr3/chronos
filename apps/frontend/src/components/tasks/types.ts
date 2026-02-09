@@ -13,7 +13,7 @@ export interface EditModalState {
   recurringDays: boolean[];
 }
 
-export const DAYS_OF_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+export const DAYS_OF_WEEK = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
 /**
  * Format recurring days - shows "Every day" if all days selected

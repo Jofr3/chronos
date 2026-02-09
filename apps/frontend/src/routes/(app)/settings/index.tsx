@@ -33,7 +33,7 @@ const getInitialModalState = (): ConstraintModalState => ({
   date: "",
 });
 
-const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
 const formatRecurringDays = (days: DayOfWeek[] | null): string => {
   if (!days || days.length === 0) return "None";
