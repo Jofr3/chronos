@@ -391,7 +391,8 @@ ai.post("/schedule", authMiddleware, async (c: ProtectedContext) => {
             role: "system",
             content: `You are a task scheduling assistant. Respond ONLY with valid JSON.
 Return an object with a "scheduled" array containing objects with "task_id", "date", and "time_period" fields.
-time_period must be one of: "morning" (6am-12pm), "afternoon" (12pm-5pm), or "evening" (5pm-10pm).
+time_period must be one of: "morning", "afternoon", or "evening".
+These are soft preferences to guide when tasks should ideally happen - the scheduler will place tasks near these times but can adjust if needed.
 Choose time_period based on the task title - e.g., "make dinner" should be evening, "morning jog" should be morning.
 Example: {"scheduled": [{"task_id": "t0", "date": "2026-01-27", "time_period": "evening"}]}`
           },
@@ -406,9 +407,9 @@ RULES:
 - Each task has an available_dates array - you MUST schedule the task on one of those dates
 - If a task has preferred_time_period field, USE that time period (it represents the user's preference)
 - Otherwise, choose time_period based on the task title:
-  * morning (6am-12pm): breakfast, morning routine, gym, workout, exercise, jog, run
-  * afternoon (12pm-5pm): lunch, work tasks, meetings, errands, shopping, groceries
-  * evening (5pm-10pm): dinner, cooking, relaxation, family time, homework, study
+  * morning: breakfast, morning routine, gym, workout, exercise, jog, run
+  * afternoon: lunch, work tasks, meetings, errands, shopping, groceries
+  * evening: dinner, cooking, relaxation, family time, homework, study, reading, wind-down
 - If the title doesn't suggest a specific time and no preferred_time_period is set, use "afternoon" as default
 - IMPORTANT: Pack as many tasks as possible into the same day before using the next day
 - For tasks with is_recurring=true: pick the FIRST date from available_dates
@@ -504,48 +505,63 @@ RULES:
       addBlockedSlot(constraint.date, startMinutes, endMinutes);
     }
 
-    // Time period boundaries
-    const timePeriods = {
-      morning: { start: timeToMinutes("06:00"), end: timeToMinutes("12:00") },
-      afternoon: { start: timeToMinutes("12:00"), end: timeToMinutes("17:00") },
-      evening: { start: timeToMinutes("17:00"), end: timeToMinutes("22:00") },
+    // Schedulable day boundaries
+    const DAY_START = timeToMinutes("06:00");
+    const DAY_END = timeToMinutes("23:59");
+
+    // Time period midpoints - soft guidance for preferred scheduling zones
+    const periodMidpoints: Record<TimePeriod, number> = {
+      morning: timeToMinutes("09:00"),
+      afternoon: timeToMinutes("14:30"),
+      evening: timeToMinutes("19:30"),
     };
 
-    // Find next available time slot on a date within a specific time range
-    const findSlotInRange = (date: string, duration: number, rangeStart: number, rangeEnd: number): { start: number; end: number } | null => {
+    // Find the closest available slot on a date, preferring times near an anchor point
+    const findClosestSlot = (date: string, duration: number, anchor: number): { start: number; end: number } | null => {
       const slots = getBlockedSlots(date);
-      let candidateStart = rangeStart;
+      let closestSlot: { start: number; end: number } | null = null;
+      let minDistance = Infinity;
 
-      for (const slot of slots) {
-        // Skip slots entirely before our range
-        if (slot.end <= rangeStart) continue;
-        // Stop if slot starts after our range
-        if (slot.start >= rangeEnd) break;
+      for (let candidateStart = DAY_START; candidateStart + duration <= DAY_END; candidateStart++) {
+        const candidateEnd = candidateStart + duration;
+        let isAvailable = true;
 
-        // Can we fit before this blocked slot (within range)?
-        if (candidateStart + duration <= slot.start && candidateStart + duration <= rangeEnd) {
-          return { start: candidateStart, end: candidateStart + duration };
+        for (const slot of slots) {
+          if (candidateStart < slot.end && candidateEnd > slot.start) {
+            isAvailable = false;
+            // Jump past this blocked slot
+            candidateStart = slot.end - 1; // -1 because loop will increment
+            break;
+          }
         }
-        // Move candidate to after this slot
-        candidateStart = Math.max(candidateStart, slot.end);
+
+        if (isAvailable) {
+          const distance = Math.abs(candidateStart - anchor);
+          if (distance < minDistance) {
+            minDistance = distance;
+            closestSlot = { start: candidateStart, end: candidateEnd };
+          } else if (distance > minDistance) {
+            // Distance is increasing, we've passed the optimal point
+            break;
+          }
+        }
       }
 
-      // Check if we can fit after all blocked slots (within range)
-      if (candidateStart + duration <= rangeEnd) {
-        return { start: candidateStart, end: candidateStart + duration };
-      }
-
-      return null; // No available slot in this range
+      return closestSlot;
     };
 
-    // Find available slot, preferring a specific time if provided, otherwise using time period
+    // Find available slot, preferring a specific time if provided, otherwise near period midpoint
     const findAvailableSlot = (date: string, duration: number, preferredPeriod: TimePeriod = "afternoon", preferredStartTime?: string): { start: number; end: number } | null => {
-      // If preferred start time is specified, try to find a slot close to that time
+      // Determine the anchor point: preferred start time or period midpoint
+      const anchor = preferredStartTime
+        ? timeToMinutes(preferredStartTime)
+        : periodMidpoints[preferredPeriod];
+
+      // If preferred start time is specified, try to schedule exactly there first
       if (preferredStartTime) {
         const preferredMinutes = timeToMinutes(preferredStartTime);
         const slots = getBlockedSlots(date);
 
-        // Try to schedule exactly at preferred time
         let canScheduleAtPreferred = true;
         for (const slot of slots) {
           if (preferredMinutes < slot.end && preferredMinutes + duration > slot.start) {
@@ -553,55 +569,13 @@ RULES:
             break;
           }
         }
-        if (canScheduleAtPreferred && preferredMinutes >= timePeriods.morning.start && preferredMinutes + duration <= timePeriods.evening.end) {
+        if (canScheduleAtPreferred && preferredMinutes >= DAY_START && preferredMinutes + duration <= DAY_END) {
           return { start: preferredMinutes, end: preferredMinutes + duration };
         }
-
-        // If exact time is not available, try to find closest available slot in same period
-        const period = getTimePeriodFromTime(preferredStartTime);
-        const range = timePeriods[period];
-
-        // Search for closest slot to preferred time within the same period
-        let closestSlot: { start: number; end: number } | null = null;
-        let minDistance = Infinity;
-
-        for (let candidateStart = range.start; candidateStart + duration <= range.end; candidateStart++) {
-          const candidateEnd = candidateStart + duration;
-          let isAvailable = true;
-
-          for (const slot of slots) {
-            if (candidateStart < slot.end && candidateEnd > slot.start) {
-              isAvailable = false;
-              break;
-            }
-          }
-
-          if (isAvailable) {
-            const distance = Math.abs(candidateStart - preferredMinutes);
-            if (distance < minDistance) {
-              minDistance = distance;
-              closestSlot = { start: candidateStart, end: candidateEnd };
-            }
-          }
-        }
-
-        if (closestSlot) return closestSlot;
       }
 
-      // Fall back to standard time period-based scheduling
-      const preferred = timePeriods[preferredPeriod];
-      let slot = findSlotInRange(date, duration, preferred.start, preferred.end);
-      if (slot) return slot;
-
-      // Fall back to other periods in order: afternoon -> morning -> evening
-      const fallbackOrder: TimePeriod[] = ["afternoon", "morning", "evening"].filter(p => p !== preferredPeriod) as TimePeriod[];
-      for (const period of fallbackOrder) {
-        const range = timePeriods[period];
-        slot = findSlotInRange(date, duration, range.start, range.end);
-        if (slot) return slot;
-      }
-
-      return null; // No available slot in any period
+      // Search full day for closest available slot to the anchor
+      return findClosestSlot(date, duration, anchor);
     };
 
     // Separate recurring and non-recurring tasks
@@ -629,13 +603,16 @@ RULES:
 
     // Helper to find a slot that works on ALL dates for a recurring task
     const findRecurringSlot = (availableDates: string[], duration: number, preferredPeriod: TimePeriod, preferredStartTime?: string): { start: number; end: number } | null => {
+      const anchor = preferredStartTime
+        ? timeToMinutes(preferredStartTime)
+        : periodMidpoints[preferredPeriod];
+
       // If preferred start time is specified, try that exact time first
       if (preferredStartTime) {
         const preferredMinutes = timeToMinutes(preferredStartTime);
         const candidateEnd = preferredMinutes + duration;
         let fitsAllDates = true;
 
-        // Check if this exact time works on all dates
         for (const date of availableDates) {
           const slots = getBlockedSlots(date);
           for (const slot of slots) {
@@ -647,72 +624,42 @@ RULES:
           if (!fitsAllDates) break;
         }
 
-        if (fitsAllDates && preferredMinutes >= timePeriods.morning.start && candidateEnd <= timePeriods.evening.end) {
+        if (fitsAllDates && preferredMinutes >= DAY_START && candidateEnd <= DAY_END) {
           return { start: preferredMinutes, end: candidateEnd };
         }
-
-        // If exact time doesn't work, try to find closest slot in same period
-        const period = getTimePeriodFromTime(preferredStartTime);
-        const range = timePeriods[period];
-        let closestSlot: { start: number; end: number } | null = null;
-        let minDistance = Infinity;
-
-        for (let candidateStart = range.start; candidateStart + duration <= range.end; candidateStart++) {
-          const candidateEnd = candidateStart + duration;
-          let fitsAllDates = true;
-
-          for (const date of availableDates) {
-            const slots = getBlockedSlots(date);
-            for (const slot of slots) {
-              if (candidateStart < slot.end && candidateEnd > slot.start) {
-                fitsAllDates = false;
-                break;
-              }
-            }
-            if (!fitsAllDates) break;
-          }
-
-          if (fitsAllDates) {
-            const distance = Math.abs(candidateStart - preferredMinutes);
-            if (distance < minDistance) {
-              minDistance = distance;
-              closestSlot = { start: candidateStart, end: candidateEnd };
-            }
-          }
-        }
-
-        if (closestSlot) return closestSlot;
       }
 
-      // Fall back to period-based search
-      const periodOrder: TimePeriod[] = [preferredPeriod, ...["afternoon", "morning", "evening"].filter(p => p !== preferredPeriod) as TimePeriod[]];
+      // Search full day for closest slot to anchor that works on ALL dates
+      let closestSlot: { start: number; end: number } | null = null;
+      let minDistance = Infinity;
 
-      for (const period of periodOrder) {
-        const range = timePeriods[period];
-        // Try each possible start time in this period
-        for (let candidateStart = range.start; candidateStart + duration <= range.end; candidateStart++) {
-          const candidateEnd = candidateStart + duration;
-          let fitsAllDates = true;
+      for (let candidateStart = DAY_START; candidateStart + duration <= DAY_END; candidateStart++) {
+        const candidateEnd = candidateStart + duration;
+        let fitsAllDates = true;
 
-          // Check if this slot is free on all available dates
-          for (const date of availableDates) {
-            const slots = getBlockedSlots(date);
-            for (const slot of slots) {
-              // Check for overlap
-              if (candidateStart < slot.end && candidateEnd > slot.start) {
-                fitsAllDates = false;
-                break;
-              }
+        for (const date of availableDates) {
+          const slots = getBlockedSlots(date);
+          for (const slot of slots) {
+            if (candidateStart < slot.end && candidateEnd > slot.start) {
+              fitsAllDates = false;
+              break;
             }
-            if (!fitsAllDates) break;
           }
+          if (!fitsAllDates) break;
+        }
 
-          if (fitsAllDates) {
-            return { start: candidateStart, end: candidateEnd };
+        if (fitsAllDates) {
+          const distance = Math.abs(candidateStart - anchor);
+          if (distance < minDistance) {
+            minDistance = distance;
+            closestSlot = { start: candidateStart, end: candidateEnd };
+          } else if (distance > minDistance) {
+            break;
           }
         }
       }
-      return null;
+
+      return closestSlot;
     };
 
     for (const { time_period, mapping } of recurringScheduled) {
