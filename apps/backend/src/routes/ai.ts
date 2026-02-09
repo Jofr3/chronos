@@ -170,7 +170,7 @@ RULES:
 - Use the duration field (in minutes) to calculate end_time from start_time
 - Schedule tasks between 09:00 and 18:00
 - Avoid overlapping tasks on the same day
-- Leave small gaps between tasks when possible`
+- Schedule tasks back-to-back without gaps between them`
           }
         ],
         max_tokens: 1024,
@@ -513,7 +513,6 @@ RULES:
 
     // Find next available time slot on a date within a specific time range
     const findSlotInRange = (date: string, duration: number, rangeStart: number, rangeEnd: number): { start: number; end: number } | null => {
-      const gap = 0; // 5 minute gap between tasks
       const slots = getBlockedSlots(date);
       let candidateStart = rangeStart;
 
@@ -527,8 +526,8 @@ RULES:
         if (candidateStart + duration <= slot.start && candidateStart + duration <= rangeEnd) {
           return { start: candidateStart, end: candidateStart + duration };
         }
-        // Move candidate to after this slot + gap
-        candidateStart = Math.max(candidateStart, slot.end + gap);
+        // Move candidate to after this slot
+        candidateStart = Math.max(candidateStart, slot.end);
       }
 
       // Check if we can fit after all blocked slots (within range)
@@ -544,7 +543,6 @@ RULES:
       // If preferred start time is specified, try to find a slot close to that time
       if (preferredStartTime) {
         const preferredMinutes = timeToMinutes(preferredStartTime);
-        const gap = 0;
         const slots = getBlockedSlots(date);
 
         // Try to schedule exactly at preferred time
@@ -567,7 +565,7 @@ RULES:
         let closestSlot: { start: number; end: number } | null = null;
         let minDistance = Infinity;
 
-        for (let candidateStart = range.start; candidateStart + duration <= range.end; candidateStart += gap) {
+        for (let candidateStart = range.start; candidateStart + duration <= range.end; candidateStart++) {
           const candidateEnd = candidateStart + duration;
           let isAvailable = true;
 
@@ -631,8 +629,6 @@ RULES:
 
     // Helper to find a slot that works on ALL dates for a recurring task
     const findRecurringSlot = (availableDates: string[], duration: number, preferredPeriod: TimePeriod, preferredStartTime?: string): { start: number; end: number } | null => {
-      const gap = 0;
-
       // If preferred start time is specified, try that exact time first
       if (preferredStartTime) {
         const preferredMinutes = timeToMinutes(preferredStartTime);
@@ -661,7 +657,7 @@ RULES:
         let closestSlot: { start: number; end: number } | null = null;
         let minDistance = Infinity;
 
-        for (let candidateStart = range.start; candidateStart + duration <= range.end; candidateStart += gap) {
+        for (let candidateStart = range.start; candidateStart + duration <= range.end; candidateStart++) {
           const candidateEnd = candidateStart + duration;
           let fitsAllDates = true;
 
@@ -694,7 +690,7 @@ RULES:
       for (const period of periodOrder) {
         const range = timePeriods[period];
         // Try each possible start time in this period
-        for (let candidateStart = range.start; candidateStart + duration <= range.end; candidateStart += gap) {
+        for (let candidateStart = range.start; candidateStart + duration <= range.end; candidateStart++) {
           const candidateEnd = candidateStart + duration;
           let fitsAllDates = true;
 

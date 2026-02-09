@@ -237,7 +237,7 @@ export default component$(() => {
             while (current <= endDate) {
               const dayOfWeek = current.getDay();
               if (constraint.recurring_days.includes(dayOfWeek as DayOfWeek)) {
-                const dateStr = current.toISOString().split("T")[0];
+                const dateStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, "0")}-${String(current.getDate()).padStart(2, "0")}`;
                 constraintEvents.push({
                   id: `constraint-${constraint.id}-${dateStr}`,
                   title: constraint.name,
