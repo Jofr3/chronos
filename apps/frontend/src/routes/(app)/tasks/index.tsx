@@ -25,6 +25,12 @@ import {
   formatDuration,
 } from "~/components/tasks";
 
+const LIST_COLORS = ["#3b82f6", "#22c55e", "#a855f7", "#f59e0b", "#ef4444", "#06b6d4"];
+const LIST_EVENT_BG = ["#dbeafe", "#dcfce7", "#ede9fe", "#fef3c7", "#fee2e2", "#cffafe"];
+const LIST_EVENT_BORDER = ["#93c5fd", "#86efac", "#c4b5fd", "#fcd34d", "#fca5a5", "#67e8f9"];
+const NO_LIST_EVENT_BG = "#f3f4f6";
+const NO_LIST_EVENT_BORDER = "#d1d5db";
+
 export default component$(() => {
   // ===== TASKS STATE =====
   const lists = useSignal<TaskListWithTasks[]>([]);
@@ -200,15 +206,35 @@ export default component$(() => {
       ]);
       constraints.value = constraintList;
 
-      const calendarEvents = events.map((event: Event) => ({
-        id: event.id,
-        title: event.title,
-        start: `${event.date}T${event.start_time}`,
-        end: `${event.date}T${event.end_time}`,
-        extendedProps: {
-          task_id: event.task_id,
-        },
-      }));
+      // Build task_id -> list index map for coloring events
+      const taskListIndexMap = new Map<string, number>();
+      lists.value.forEach((list, i) => {
+        list.tasks.forEach((task) => {
+          taskListIndexMap.set(task.id, i);
+        });
+      });
+
+      const calendarEvents = events.map((event: Event) => {
+        const listIndex = taskListIndexMap.get(event.task_id);
+        const bgColor = listIndex !== undefined
+          ? LIST_EVENT_BG[listIndex % LIST_EVENT_BG.length]
+          : NO_LIST_EVENT_BG;
+        const borderColor = listIndex !== undefined
+          ? LIST_EVENT_BORDER[listIndex % LIST_EVENT_BORDER.length]
+          : NO_LIST_EVENT_BORDER;
+
+        return {
+          id: event.id,
+          title: event.title,
+          start: `${event.date}T${event.start_time}`,
+          end: `${event.date}T${event.end_time}`,
+          backgroundColor: bgColor,
+          borderColor: borderColor,
+          extendedProps: {
+            task_id: event.task_id,
+          },
+        };
+      });
 
       if (calendarInstance.value) {
         // Get visible date range (extend by a month on each side for smooth scrolling)
@@ -682,8 +708,6 @@ export default component$(() => {
 
   const pendingTasks = visibleTasks.filter((t) => !t.task.completed);
   const completedTasks = visibleTasks.filter((t) => t.task.completed);
-
-  const LIST_COLORS = ["#3b82f6", "#22c55e", "#a855f7", "#f59e0b", "#ef4444", "#06b6d4"];
 
   return (
     <>

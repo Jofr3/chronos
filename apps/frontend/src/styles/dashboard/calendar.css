@@ -55,7 +55,7 @@
       font-size: 11px;
       padding: 1px 4px;
       border: none;
-      background: #dbeafe;
+      border-left: 3px solid;
       color: var(--n-text);
     }
 
