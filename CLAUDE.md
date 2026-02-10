@@ -14,38 +14,28 @@ Chronos is a full-stack task management and calendar application built as a Bun 
 - **Database**: Cloudflare D1 (SQLite) with Drizzle ORM
 - **Deployment**: Cloudflare Pages (frontend) + Workers (backend)
 - **Language**: TypeScript 5
+- **Styling**: Custom CSS with design tokens (no Tailwind/Bootstrap)
+- **Nix**: Optional reproducible dev environment via `flake.nix` (provides bun, cacert, dotenv-cli)
 
 ## Development Commands
 
 ```bash
-# Install dependencies
-bun install
+bun install                                         # Install dependencies
+bun dev                                             # Run all workspaces
+bun --filter @chronos/backend dev                   # Backend on http://localhost:8787
+bun --filter @chronos/frontend dev                  # Frontend on http://localhost:5173
+bun build                                           # Build all workspaces
 
-# Optional: Use Nix for reproducible environment
-nix develop
-
-# Development (runs all workspaces)
-bun dev
-
-# Run specific workspace
-bun --filter @chronos/backend dev      # Backend on http://localhost:8787
-bun --filter @chronos/frontend dev     # Frontend on http://localhost:5173
-
-# Build
-bun build                               # Build all workspaces
-bun --filter @chronos/backend build
-bun --filter @chronos/frontend build
-
-# Backend-specific commands
+# Backend database
 cd apps/backend
-bun drizzle                             # Open Drizzle Studio (database GUI)
-bun migrate:dev --file=migrations/XXXX_name.sql   # Run specific migration on dev DB
-bun migrate:pre --file=migrations/XXXX_name.sql   # Run migration on preview DB
-bun migrate:prod --file=migrations/XXXX_name.sql  # Run migration on production DB
+bun drizzle                                         # Open Drizzle Studio (localhost:4983)
+bun migrate:dev --file=migrations/XXXX_name.sql     # Run migration on dev DB
+bun migrate:pre --file=migrations/XXXX_name.sql     # Run migration on preview DB
+bun migrate:prod --file=migrations/XXXX_name.sql    # Run migration on production DB
 
-# Frontend-specific commands
+# Frontend
 cd apps/frontend
-bun lint                                # Lint frontend code
+bun lint                                            # Lint frontend code
 ```
 
 ## Architecture
@@ -55,171 +45,132 @@ bun lint                                # Lint frontend code
 ```
 chronos/
 ├── apps/
-│   ├── backend/          # @chronos/backend - Hono API
+│   ├── backend/          # @chronos/backend - Hono API on Cloudflare Workers
 │   │   ├── src/
-│   │   │   ├── db/       # Drizzle schema and queries
-│   │   │   ├── routes/   # API route handlers (auth, users, tasks, events, ai)
+│   │   │   ├── db/       # Drizzle schema (schema.ts) and query helpers (queries/)
+│   │   │   ├── middleware/  # Auth middleware (JWT verification)
+│   │   │   ├── routes/   # API route handlers (auth, users, tasks, events, ai, constraints)
 │   │   │   ├── services/ # Business logic layer
+│   │   │   ├── utils/    # JWT utils, response helpers
 │   │   │   └── types/    # Backend-specific types (env.ts)
 │   │   └── migrations/   # SQL migration files
-│   └── frontend/         # @chronos/frontend - Qwik app
+│   └── frontend/         # @chronos/frontend - Qwik app on Cloudflare Pages
 │       └── src/
 │           ├── routes/   # File-based routing (QwikCity)
-│           │   ├── (app)/      # Protected app routes (tasks, calendars)
+│           │   ├── (app)/      # Protected routes (tasks, calendars, settings)
 │           │   ├── admin/      # Admin-only routes
-│           │   ├── login/
-│           │   ├── signup/
-│           │   └── logout/
+│           │   ├── api/[...path]/ # API proxy for production same-origin requests
+│           │   ├── login/ signup/ logout/
 │           ├── components/
-│           └── services/ # API client services
+│           ├── services/ # API client singletons (auth, task, event, constraint, user)
+│           ├── styles/   # CSS files with custom properties (dark theme)
+│           └── config/   # Environment config (env.ts)
 └── packages/
-    └── types/            # @chronos/types - Shared types
+    └── types/            # @chronos/types - Shared TypeScript types
 ```
 
-### Backend Architecture
+### Backend Request Flow
 
-- **Routes** (`src/routes/*.ts`): HTTP route handlers organized by resource (auth, users, tasks, events, ai)
-- **Services** (`src/services/*.ts`): Business logic layer (auth.service.ts, user.service.ts, task.service.ts)
-- **Database** (`src/db/`): Drizzle schema and query functions
-- **Entry Point** (`src/index.ts`): Hono app initialization with CORS middleware and route mounting
+1. `src/index.ts`: Hono app with CORS middleware, routes mounted under `/api/*`
+2. Protected routes apply `authMiddleware` which extracts userId from JWT Bearer token
+3. Route handlers create service instances with `DrizzleClient`, delegate to services
+4. Services contain business logic, return data
+5. Routes use standardized response helpers (`successResponse`, `errorResponse`, etc.)
 
-All routes are mounted under `/api/*` prefix.
+**Routes**: auth, users, tasks, events, ai, constraints — all under `/api/`
+
+### Authentication
+
+- Custom JWT implementation using **Web Crypto API** (no Node.js crypto) in `src/utils/jwt.ts`
+- HMAC-SHA256 signatures, 7-day expiration
+- Password hashing via PBKDF2 (100k iterations, SHA-256, 16-byte salt)
+- Auth middleware (`src/middleware/auth.ts`) sets `userId` on context: `c.set("userId", userId)` / `getAuthUserId(c)`
+- Frontend stores token in cookie (`chronos_auth_token`) for SSR auth checks
 
 ### Frontend Architecture
 
-- **File-based routing**: QwikCity uses filesystem structure in `src/routes/`
-- **Layout files**: `layout.tsx` files define shared layouts for route groups
-- **Route groups**: `(app)/` contains protected application routes
-- **Server functions**: Use `routeLoader$()` and `routeAction$()` for server-side data fetching
-- **Components**: Use `component$()` and `$()` for lazy loading
+- **Protected routes**: `(app)/layout.tsx` uses `routeLoader$` to verify token via `/api/auth/me` call, redirects to `/login` if invalid
+- **Server actions**: Form submissions use `routeAction$()` with `zod$()` validation
+- **State management**: Qwik Signals (`useSignal`, `useStore`), not React-style useState
+- **API clients**: Singleton service classes in `src/services/` with internal `request()` helper that auto-attaches Bearer token from localStorage
+- **SSR/Browser URL handling**: `getApiBaseUrl()` in `src/config/env.ts` returns localhost in dev, full backend URL on server-side in prod, empty string in browser (uses same-origin API proxy)
 
 ### Database Schema
 
-Tables: `users`, `task_lists`, `tasks`, `events`
+Tables: `users`, `task_lists`, `tasks`, `events`, `time_constraints`
 
-- **users**: id (integer), email, username, first_name, last_name, password_hash, role (user|developer), deleted_at
-- **task_lists**: id (text/UUID), user_id, name
-- **tasks**: id (text/UUID), user_id, list_id (nullable), title, description, completed, due_date, duration, is_recurring, recurring_days, deleted_at
-- **events**: id (text/UUID), user_id, task_id, date, start_time, end_time
+Key patterns:
+- **Soft deletes**: `tasks` and `time_constraints` use `deleted_at` field — always filter with `isNull(table.deleted_at)`
+- **UUIDs**: Text IDs for all tables except `users` (integer auto-increment)
+- **Recurring items**: `is_recurring` boolean + `recurring_days` as JSON string `"[0,1,2,3,4,5,6]"` (0=Sunday, 6=Saturday). Parse with helper functions
+- **Time format**: `HH:MM` 24-hour strings for `start_time`/`end_time`
+- **Date format**: ISO `YYYY-MM-DD` strings
+- All tables have `created_at` and `updated_at` timestamps
+- Foreign keys cascade on delete
 
-All tables have `created_at` and `updated_at` timestamps. Foreign keys cascade on delete. Tasks have `user_id` directly for ownership and optionally belong to a `task_list`.
+### Standardized API Responses
+
+Backend uses `src/utils/responses.ts` for consistent responses:
+- `successResponse(c, data, message?, status?)` — wraps in `ApiResponse<T>`
+- `errorResponse(c, code, message, status?)` — uses `ErrorCodes` enum (UNAUTHORIZED, VALIDATION_ERROR, NOT_FOUND, etc.)
+- `handleError(c, error, context)` — catches unknown errors with logging
+
+### CSS Architecture
+
+Dark theme with CSS custom properties in `frontend/src/global.css`:
+- `--bg-primary: #0f0f0f`, `--bg-secondary: #1a1a1a`
+- `--accent-primary: #ff4444` (red), `--accent-secondary: #ff8833` (orange)
+- `--accent-gradient: linear-gradient(135deg, #ff4444 0%, #ff8833 100%)`
+- Component-specific CSS in `styles/dashboard/` (tasks.css, calendar.css, modals.css, settings.css)
 
 ## Database Workflow
 
-### Creating Migrations
-
 1. Update schema in `apps/backend/src/db/schema.ts`
 2. Create migration file in `apps/backend/migrations/` with naming: `XXXX_description.sql`
-3. Run migration: `cd apps/backend && bun migrate:dev`
+3. Run migration: `cd apps/backend && bun migrate:dev --file=migrations/XXXX_name.sql`
 
-### Working with Drizzle
-
-```bash
-cd apps/backend
-bun drizzle  # Opens Drizzle Studio on localhost:4983
-```
-
-Drizzle config is in `apps/backend/drizzle.config.ts` pointing to local D1 SQLite file at `.wrangler/state/v3/d1/miniflare-D1DatabaseObject/*/db.sqlite`.
-
-## Shared Types
-
-Import shared types from `@chronos/types`:
-
-```typescript
-import type { User, ApiResponse, ApiError } from "@chronos/types";
-```
-
-Database types are exported from schema: `apps/backend/src/db/schema.ts`
+Drizzle config points to local D1 SQLite at `.wrangler/state/v3/d1/miniflare-D1DatabaseObject/*/db.sqlite`.
 
 ## Cloudflare-Specific Constraints
 
-**CRITICAL**: The backend runs on Cloudflare Workers, which uses Web APIs only.
+**CRITICAL**: The backend runs on Cloudflare Workers — Web APIs only.
 
-- **No Node.js APIs**: Cannot use `fs`, `path`, `process`, or any Node.js built-ins
-- **Use Web APIs**: `fetch()`, `URL`, `crypto`, etc.
+- **No Node.js APIs**: Cannot use `fs`, `path`, `process`, `crypto` (Node), `bcrypt`
+- **Use Web APIs**: `fetch()`, `URL`, `crypto.subtle` (Web Crypto), `Headers`, `Response`
 - **Environment bindings**: Access via `c.env.DB`, `c.env.AI`, `c.env.JWT_SECRET` in Hono context
 
-### Environment Bindings (wrangler.toml)
-
+Environment bindings (wrangler.toml):
 - `DB`: D1 database binding
-- `AI`: Workers AI binding (uses `@cf/qwen/qwq-32b` for task scheduling, `@cf/meta/llama-3.1-8b-instruct` for chat)
-- `JWT_SECRET`: Secret for JWT token signing (set per environment)
+- `AI`: Workers AI binding (`@cf/qwen/qwq-32b` for scheduling, `@cf/meta/llama-3.1-8b-instruct` for chat)
+- `JWT_SECRET`: Secret for JWT signing (set per environment)
 
 Three environments: `development` (local D1), `preview`, `production`
 
-### Frontend Environment
+## Shared Types
 
-API base URL is configured in `apps/frontend/src/config/env.ts`:
-- Development: `http://localhost:8787`
-- Production: `https://chronos-backend.jofrescari.workers.dev`
+Import from `@chronos/types`:
+```typescript
+import type { User, Task, Event, TimeConstraint, ApiResponse, ApiError } from "@chronos/types";
+```
+
+Database types exported from schema: `apps/backend/src/db/schema.ts`
+
+Internal packages use `workspace:*` protocol in package.json dependencies.
+
+## Code Conventions
+
+- Use `type` imports for type-only imports
+- Backend routes: `new Hono<{ Bindings: Env; Variables: { userId: string } }>()`
+- Backend services: Constructor accepts `DrizzleClient`, methods take `userId` for ownership scoping
+- Frontend components: `component$()` with `$()` for lazy-loaded callbacks
+- Frontend data loading: `routeLoader$()` for server-side, `useVisibleTask$()` for client-side effects
+- Avoid N+1 queries: Use `Promise.all()` for parallel data fetching in services
+- `sqliteTable` for Drizzle table definitions; always include timestamps; add indexes on foreign keys
 
 ## Project Wiki
 
 The `wiki/` directory contains:
-- **changelog/**: Detailed record of all codebase changes (format: `short_description_YYYY-MM-DD.md`)
-- **codebase/**: Consolidated documentation files
-  - `backend.md` - Backend architecture, routes, services, database
-  - `frontend.md` - Frontend architecture, routes, components, Qwik patterns
-  - `shared-types.md` - Shared TypeScript types from `@chronos/types`
-  - `infrastructure.md` - Deployment, environments, Cloudflare configuration
+- **changelog/**: Record of all codebase changes (format: `short_description_YYYY-MM-DD.md`)
+- **codebase/**: Consolidated docs (backend.md, frontend.md, shared-types.md, infrastructure.md)
 
 **IMPORTANT**: When making significant changes to the codebase, create a changelog entry in `wiki/changelog/` with format: `short_description_YYYY-MM-DD.md`
-
-## Code Conventions
-
-### TypeScript
-
-- Use strict TypeScript with proper type annotations
-- Use `type` imports for type-only imports
-- Export shared types from `@chronos/types`
-
-### Backend (Hono)
-
-```typescript
-import { Hono } from "hono";
-import type { Env } from "../types/env";
-
-const app = new Hono<{ Bindings: Env }>();
-
-app.get("/", async (c) => {
-  const db = drizzle(c.env.DB);
-  // Access bindings via c.env
-});
-```
-
-### Frontend (Qwik)
-
-```typescript
-import { component$ } from "@builder.io/qwik";
-import { routeLoader$ } from "@builder.io/qwik-city";
-
-// Server-side data loading
-export const useData = routeLoader$(async () => {
-  return { data: [] };
-});
-
-// Component
-export default component$(() => {
-  const data = useData();
-  return <div>{data.value.data}</div>;
-});
-```
-
-### Database (Drizzle)
-
-- Use `sqliteTable` for table definitions
-- Always include `created_at` and `updated_at` timestamps
-- Use text IDs (UUIDs) for new tables (except users which uses integer)
-- Add indexes on foreign keys and frequently queried columns
-
-## Workspace Dependencies
-
-Internal packages use `workspace:*` protocol:
-
-```json
-{
-  "dependencies": {
-    "@chronos/types": "workspace:*"
-  }
-}
-```
